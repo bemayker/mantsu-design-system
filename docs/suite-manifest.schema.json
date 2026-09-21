@@ -4,7 +4,12 @@
   "title": "Mantsu suite manifest, version 1",
   "description": "The landscape a Mantsu frontend renders its navigation rail from. Normative document: docs/suite-manifest.md. This schema is for PRODUCER validation: it sets additionalProperties false so a backend emitting an undefined field fails its own tests. Consumers must not validate with it, because ignoring unknown fields is what lets the contract grow additively.",
   "type": "object",
-  "required": ["schemaVersion", "self", "source", "apps"],
+  "required": [
+    "schemaVersion",
+    "self",
+    "source",
+    "apps"
+  ],
   "additionalProperties": false,
   "properties": {
     "schemaVersion": {
@@ -18,7 +23,10 @@
     },
     "source": {
       "description": "core: the landscape came from Core, or this is Core. fallback: Core was never reached, so apps contains only self.",
-      "enum": ["core", "fallback"]
+      "enum": [
+        "core",
+        "fallback"
+      ]
     },
     "stale": {
       "description": "True when a relay is serving its last good copy because Core is unreachable right now. Absent means fresh. Never true together with source fallback: there is nothing cached to be stale.",
@@ -27,37 +35,64 @@
     "suite": {
       "description": "Suite-wide links. Present exactly when core is in apps[], because both targets live in Core.",
       "type": "object",
-      "required": ["dashboardUrl", "settingsUrl"],
+      "required": [
+        "dashboardUrl",
+        "settingsUrl"
+      ],
       "additionalProperties": false,
       "properties": {
-        "dashboardUrl": { "$ref": "#/$defs/absoluteUrl" },
-        "settingsUrl": { "$ref": "#/$defs/absoluteUrl" }
+        "dashboardUrl": {
+          "$ref": "#/$defs/absoluteUrl"
+        },
+        "settingsUrl": {
+          "$ref": "#/$defs/absoluteUrl"
+        }
       }
     },
     "apps": {
       "description": "The landscape, ordered by order ascending. Never empty: self is always in it.",
       "type": "array",
       "minItems": 1,
-      "items": { "$ref": "#/$defs/app" }
+      "items": {
+        "$ref": "#/$defs/app"
+      }
     }
   },
   "allOf": [
     {
       "$comment": "source fallback means Core was never reached, so there can be no Core to link to and no second app to list.",
-      "if": { "properties": { "source": { "const": "fallback" } }, "required": ["source"] },
+      "if": {
+        "properties": {
+          "source": {
+            "const": "fallback"
+          }
+        },
+        "required": [
+          "source"
+        ]
+      },
       "then": {
         "properties": {
-          "apps": { "maxItems": 1 },
-          "stale": { "const": false }
+          "apps": {
+            "maxItems": 1
+          },
+          "stale": {
+            "const": false
+          }
         },
-        "not": { "required": ["suite"] }
+        "not": {
+          "required": [
+            "suite"
+          ]
+        }
       }
     }
   ],
   "$defs": {
     "appKey": {
-      "description": "Closed set, equal to the appKey Core publishes in the role catalogue. A sixth app is a schema change, not a configuration change.",
-      "enum": ["core", "cockpit", "downtimes", "lists", "reporting"]
+      "description": "A lowercase slug identifying an app, equal to the appKey Core publishes in the role catalogue. OPEN since NAV-19: adding an app is a configuration change, not a schema change. Narrow on purpose, because this value reaches URLs, data- attributes and a role-catalogue lookup.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,31}$"
     },
     "absoluteUrl": {
       "type": "string",
@@ -66,10 +101,18 @@
     },
     "app": {
       "type": "object",
-      "required": ["key", "name", "icon", "url", "order"],
+      "required": [
+        "key",
+        "name",
+        "icon",
+        "url",
+        "order"
+      ],
       "additionalProperties": false,
       "properties": {
-        "key": { "$ref": "#/$defs/appKey" },
+        "key": {
+          "$ref": "#/$defs/appKey"
+        },
         "name": {
           "description": "Display name as configured. Not translated: these are product names.",
           "type": "string",
@@ -93,13 +136,20 @@
         "nav": {
           "description": "The app's own rail items. Phase 2; absent in phase 1.",
           "type": "array",
-          "items": { "$ref": "#/$defs/navEntry" }
+          "items": {
+            "$ref": "#/$defs/navEntry"
+          }
         }
       }
     },
     "navEntry": {
       "type": "object",
-      "required": ["key", "label", "path", "group"],
+      "required": [
+        "key",
+        "label",
+        "path",
+        "group"
+      ],
       "additionalProperties": false,
       "properties": {
         "key": {
@@ -110,11 +160,20 @@
         "label": {
           "description": "Both languages, always: the rail has no fallback language.",
           "type": "object",
-          "required": ["en", "nl"],
+          "required": [
+            "en",
+            "nl"
+          ],
           "additionalProperties": false,
           "properties": {
-            "en": { "type": "string", "minLength": 1 },
-            "nl": { "type": "string", "minLength": 1 }
+            "en": {
+              "type": "string",
+              "minLength": 1
+            },
+            "nl": {
+              "type": "string",
+              "minLength": 1
+            }
           }
         },
         "path": {
@@ -124,7 +183,10 @@
         },
         "group": {
           "description": "configuration renders under the inert Configuration subtitle; null is an ordinary sub-item. Explicit rather than optional, so a producer that forgets it fails instead of silently moving an item out of Configuration.",
-          "enum": ["configuration", null]
+          "enum": [
+            "configuration",
+            null
+          ]
         }
       }
     }

@@ -120,10 +120,22 @@ describe('schema rejects what a producer must not emit', () => {
     expect(validate({ ...base(), somethingNew: true })).toBe(false);
   });
 
-  it('an app key outside the closed set', () => {
+  it('a malformed app key', () => {
+    // NAV-19: the set is OPEN, so `warehouse` is valid and asserted below. What
+    // the schema still refuses is a key that is not a slug, because this value
+    // reaches URLs, `data-` attributes and a role-catalogue lookup.
+    for (const bad of ['Warehouse', 'ware house', 'ware/house', '1warehouse', 'w', '']) {
+      const m = base();
+      m.apps[0].key = bad;
+      expect(validate(m), `expected the schema to reject ${JSON.stringify(bad)}`).toBe(false);
+    }
+  });
+
+  it('accepts an app key the suite does not ship yet', () => {
     const m = base();
     m.apps[0].key = 'warehouse';
-    expect(validate(m)).toBe(false);
+    m.self = 'warehouse';
+    expect(validate(m)).toBe(true);
   });
 
   it('an app url with a trailing slash', () => {
@@ -203,13 +215,26 @@ describe('parseManifest keeps what it can and says what it dropped', () => {
     expect(parsed.manifest.apps[0]).not.toHaveProperty('tagline');
   });
 
-  it('drops an unknown app key rather than rendering an unlabelled row', () => {
+  it('renders an app key it has never heard of (NAV-19)', () => {
+    // The whole point of opening the set: a sixth app reaches the rail through
+    // the environment's configuration, without a release of this package. The
+    // icon falls back to `GenericAppIcon`, because `SuiteNav` keys its icon map
+    // on the entry's own `icon` field rather than on this value.
     const payload = base();
     payload.apps.push({ key: 'warehouse', name: 'Warehouse', icon: 'warehouse', url: 'http://wh.example', order: 60 });
     const parsed = parseManifest(payload, self);
     expect(parsed.degraded).toBe(false);
-    expect(parsed.manifest.apps.map((a) => a.key)).not.toContain('warehouse');
-    expect(parsed.warnings.join(' ')).toContain('warehouse');
+    expect(parsed.manifest.apps.map((a) => a.key)).toContain('warehouse');
+    expect(parsed.warnings).toEqual([]);
+  });
+
+  it('still drops a malformed app key, and says so', () => {
+    const payload = base();
+    payload.apps.push({ key: 'Ware House', name: 'Warehouse', icon: 'warehouse', url: 'http://wh.example', order: 60 });
+    const parsed = parseManifest(payload, self);
+    expect(parsed.degraded).toBe(false);
+    expect(parsed.manifest.apps.map((a) => a.key)).not.toContain('Ware House');
+    expect(parsed.warnings.join(' ')).toContain('malformed');
   });
 
   it('renders an unknown nav group as an ordinary item and warns', () => {
