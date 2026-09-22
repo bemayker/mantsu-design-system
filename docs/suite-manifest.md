@@ -105,16 +105,27 @@ both rows rather than linking somewhere that does not exist.
 
 | Field | Type | Required | Meaning |
 |---|---|---|---|
-| `key` | `core` \| `cockpit` \| `downtimes` \| `lists` \| `reporting` | yes | Stable identity. Equal to the `appKey` Core publishes in the role catalogue (`assignments[].app`), so a rail row and a role assignment cannot disagree about what an app is called. |
+| `key` | slug, `^[a-z][a-z0-9-]{1,31}$` | yes | Stable identity. Equal to the `appKey` Core publishes in the role catalogue (`assignments[].app`), so a rail row and a role assignment cannot disagree about what an app is called. Shipped today: `core`, `cockpit`, `downtimes`, `lists`, `reporting`. |
 | `name` | string | yes | Display name, as configured. Not translated: these are product names. |
 | `icon` | string | yes | An icon *key*, never markup. The consumer maps it to a component; see [Icons](#icons). |
 | `url` | absolute URL, no trailing slash | yes | The app's public origin in this environment. |
 | `order` | integer | yes | Rail order, ascending. Configured, not derived, so an environment can order its own landscape. Ties break on `key`. |
 | `nav` | array | no | The app's own rail items. Phase 2; see [Nav entries](#nav-entries). |
 
-The key set is closed on purpose. A sixth app is a schema change, not a configuration
-change, because every consumer has an icon map and a settings scope list keyed by it. An
-unknown key is dropped with a warning rather than rendered as an unlabelled row.
+**The key set is open (NAV-19).** Any lowercase slug matching
+`^[a-z][a-z0-9-]{1,31}$` is valid, so adding a sixth app is a configuration change in the
+environment's Helm values and neither a schema change nor a release of this package. The
+five keys in the table are the ones the suite ships today; the type offers them to
+autocomplete and does not restrict the value.
+
+It used to be closed, on the grounds that every consumer keyed an icon map and a settings
+scope list off it. Neither held: `SuiteNav` resolves an icon from the entry's own `icon`
+field and falls back to `GenericAppIcon` for one it does not recognise, and
+`APPS_WITHOUT_SETTINGS` is an exclusion list, so an app that is not on it gets a settings
+scope by default. An unknown app therefore renders correctly today.
+
+A **malformed** key is still dropped with a warning: this value reaches URLs, `data-`
+attributes and a role-catalogue lookup, so anything needing escaping does not belong here.
 
 ### Nav entries
 

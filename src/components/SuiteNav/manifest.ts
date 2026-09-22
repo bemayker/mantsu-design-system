@@ -14,11 +14,31 @@
 export const SUITE_MANIFEST_SCHEMA_VERSION = 1;
 
 /**
- * Closed set, equal to the `appKey` Core publishes in the role catalogue, so a
- * rail row and a role assignment cannot disagree about what an app is called.
+ * The apps the suite ships today. Equal to the `appKey` Core publishes in the
+ * role catalogue, so a rail row and a role assignment cannot disagree about
+ * what an app is called.
+ *
+ * **This is the known set, not the allowed set** (NAV-19). It exists for
+ * autocomplete and for fixtures; validation is `APP_KEY_PATTERN` below.
  */
 export const SUITE_APP_KEYS = ['core', 'cockpit', 'downtimes', 'lists', 'reporting'] as const;
-export type SuiteAppKey = (typeof SUITE_APP_KEYS)[number];
+
+/**
+ * Any well-formed key, with the shipped ones offered by autocomplete.
+ *
+ * The `string & {}` arm is what keeps both: TypeScript suggests the five known
+ * keys while still accepting a sixth. A closed union would make adding an app a
+ * release of this package that every consumer then has to bump, which is
+ * exactly the coupling NAV-19 removes.
+ */
+export type SuiteAppKey = (typeof SUITE_APP_KEYS)[number] | (string & {});
+
+/**
+ * A lowercase slug. Deliberately narrow, because this value ends up in URLs, in
+ * `data-` attributes and in a role-catalogue lookup: anything that needs
+ * escaping in one of those does not belong here.
+ */
+export const APP_KEY_PATTERN = /^[a-z][a-z0-9-]{1,31}$/;
 
 /** `'configuration'` renders under the inert Configuration subtitle. */
 export type SuiteNavGroup = 'configuration';
@@ -104,7 +124,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const isAppKey = (value: unknown): value is SuiteAppKey =>
-  typeof value === 'string' && (SUITE_APP_KEYS as readonly string[]).includes(value);
+  typeof value === 'string' && APP_KEY_PATTERN.test(value);
 
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === 'string' && value.length > 0;
@@ -184,9 +204,11 @@ function parseApp(input: unknown, warnings: string[]): SuiteApp | null {
   }
   const { key, name, icon, url, order, nav } = input;
   if (!isAppKey(key)) {
-    // Deliberately dropped rather than rendered as an unlabelled row: every
-    // consumer keys its icon map and settings scopes by this value.
-    warnings.push(`Dropped an app with unknown key ${JSON.stringify(key)}.`);
+    // A key this parser has never heard of is fine and renders normally with
+    // the generic icon (NAV-19): adding an app must be configuration, not a
+    // release of this package. A MALFORMED key is still dropped, because this
+    // value reaches URLs and `data-` attributes.
+    warnings.push(`Dropped an app with malformed key ${JSON.stringify(key)}.`);
     return null;
   }
   if (!isNonEmptyString(name) || !isNonEmptyString(icon) || !isAbsoluteUrl(url)) {
