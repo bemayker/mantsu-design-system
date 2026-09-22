@@ -37,7 +37,7 @@ export interface DataTableProps<T> {
   idKey?: keyof T;
   onRowClick?: (row: T) => void;
   onRowContextMenu?: (row: T, event: React.MouseEvent) => void;
-  /** DT-FND-11 extension: forwarded to the DS `Table`'s `onRowDoubleClick`. */
+  /** forwarded to `Table`'s `onRowDoubleClick`. */
   onRowDoubleClick?: (row: T) => void;
   selectedId?: string | number;
   /**
@@ -50,7 +50,7 @@ export interface DataTableProps<T> {
   emptyState?: ReactNode;
   className?: string;
   /**
-   * Dense header variant (CORE-EQ-3). Maps to the vendored DS Table's
+   * Dense header variant (CORE-EQ-3). Maps to `Table`'s
    * `density='compact'` (12px bold, tighter `px-3 py-1.5`); the default maps to
    * `density='large'`. Default `false`.
    */
@@ -98,23 +98,23 @@ export interface DataTableProps<T> {
   /** Notified whenever the per-column search values change (CORE-FB-14). */
   onColumnFiltersChange?: (filters: Record<string, string>) => void;
   /**
-   * DT-FND-11 extension: override the per-row `data-testid`. Defaults to
+   * override the per-row `data-testid`. Defaults to
    * `data-table-row-${id}`. `coding_standards.md` §3.6 makes a `data-testid`
    * part of a component's public contract for testing, so a screen migrating
    * ONTO this adapter must be able to keep the row ids its specs already use
-   * instead of rewriting every spec. The underlying DS `Table` already accepts
+   * instead of rewriting every spec. `Table` itself already accepts
    * `rowTestId`; this only stops the adapter from hardcoding it.
    */
   rowTestId?: (row: T) => string;
   /**
-   * DT-FND-11 extension: extra per-row classes, merged AFTER the adapter's own
+   * extra per-row classes, merged AFTER the adapter's own
    * (cursor, selected tint, archived dimming) so a screen can add a row accent
    * the adapter does not know about, e.g. the records table's left border on an
    * undeclared downtime. Returning `undefined` adds nothing.
    */
   rowClassName?: (row: T) => string | undefined;
   /**
-   * DT-FND-11 extension: extra attributes on each body row, forwarded to the DS
+   * extra attributes on each body row, forwarded to the DS
    * `Table`'s own `rowProps`. Exists for `aria-selected`: the hand-written
    * tables this adapter replaces set it on the selected row, and dropping it
    * would leave selection conveyed by a background tint alone.
@@ -137,13 +137,14 @@ function isColumnVisible<T>(
 }
 
 /**
- * Config-driven data table. A thin adapter over the vendored design-system
- * `Table<T>` (`../dsTable/Table`), preserving `DataTable`'s external prop and
- * testid contract (`data-table`, `data-table-row-${id}`,
- * `data-table-header-${key}`, `data-table-skeleton-row-${i}`) while gaining the
- * DS per-column header sort and in-column search. Drawer-open column hiding,
- * `bg-frost` selected-row highlighting, archived-row dimming, and the loading
- * skeletons are mapped onto the DS component's extension points.
+ * Config-driven data table: a thin adapter over `Table<T>`.
+ *
+ * Preserves the external prop and test-id contract the screens were written
+ * against (`data-table`, `data-table-row-{id}`, `data-table-header-{key}`,
+ * `data-table-skeleton-row-{i}`) while gaining `Table`'s per-column header sort
+ * and in-column search. Drawer-open column hiding, selected-row highlighting,
+ * archived-row dimming and the loading skeletons are mapped onto `Table`'s own
+ * extension points.
  */
 export function DataTable<T>({
   columns,
@@ -175,7 +176,7 @@ export function DataTable<T>({
   );
   const sortEnabled = Boolean(onSortChange);
 
-  // The DS Table keys its sort by the column key; `DataTable`'s external
+  // `Table` keys its sort by the column key; `DataTable`'s external
   // contract keys sort by the API `sortKey`. Translate in both directions.
   const columnKeyForSortKey = (sortKey: string): string => {
     const column = columns.find((candidate) => candidate.sortKey === sortKey);
@@ -226,7 +227,7 @@ export function DataTable<T>({
     return (
       cn(
         onRowClick && 'cursor-pointer',
-        // DT-FND-11 extension: `!bg-frost`, not `bg-frost`. The DS `Table`
+        // `!bg-frost`, not `bg-frost`, and the `!` is load-bearing. `Table`
         // applies `hover:bg-slate-50` to EVERY row unconditionally, at the same
         // Tailwind specificity, so a selected row lost its tint while the
         // pointer was over it -- exactly the moment after a click, when the
@@ -241,7 +242,7 @@ export function DataTable<T>({
         // did exactly that and still lost to `hover:bg-slate-50`.
         selectedId !== undefined && rowId === selectedId && '!bg-frost',
         (isRowArchived?.(row) ?? false) && 'italic opacity-60',
-        // DT-FND-11 extension: caller classes last, so a screen accent wins a
+        // caller classes last, so a screen accent wins a
         // conflict with the adapter's defaults rather than losing to them.
         extraRowClassName?.(row),
       ) || undefined
@@ -266,7 +267,7 @@ export function DataTable<T>({
       className={className}
       rowKey={(row) => String(getCellValue(row, idKey))}
       rowTestId={(row) =>
-        // DT-FND-11 extension: caller override, same default as before.
+        // caller override, same default as before.
         rowTestId?.(row) ?? `data-table-row-${String(getCellValue(row, idKey))}`
       }
       rowClassName={rowClassName}
