@@ -6,6 +6,51 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 package follows [semantic versioning](https://semver.org/). See "Versioning" in the README
 for what counts as breaking.
 
+## 1.4.0
+
+### Added
+
+- `font-title` in the preset (`fontFamily.title`: DM Sans, then Lato) and
+  `tokens.typography.titleFontFamily`, with DM Sans loaded by `styles.css`.
+- `rounded-xl` at 16px in the preset (`borderRadius.xl`) and `tokens.radii.xl`.
+
+Core, Downtimes and the Order Cockpit each declared both values in their own
+Tailwind config, identically. The suite shell (`mantsu-ui`) extends nothing,
+because a value missing from the preset belongs here, so since the first port
+it rendered drawer and section titles in Lato and large panels at Tailwind's
+12px default. Three apps agreeing is the promotion condition.
+
+Not breaking for anyone measured: the three apps already used exactly these
+values, and neither the package's own components nor Lists use `font-title` or
+`rounded-xl`. An app that relied on Tailwind's 12px `rounded-xl` without
+overriding it would see 16px; none does. The three apps can drop their local
+`theme.extend` entries once they are on 1.4.0.
+
+## 1.3.1
+
+_Backfilled at 1.4.0; this release shipped without an entry._
+
+### Fixed
+
+- `Toast` carries `data-toast-variant` again. 1.3.0 dropped it, and Downtimes'
+  E2E specs match on it in 57 places.
+
+## 1.3.0
+
+_Backfilled at 1.4.0; this release shipped without an entry._
+
+### Added
+
+- `DataTable` (with `DataTableColumn`), the adapter over `Table` that Core and
+  Downtimes both shipped, promoted from Downtimes' superset copy.
+
+### Changed
+
+- `Toast`, `ToastProvider` and `useToast` are now the component Core and
+  Downtimes rendered (`message`/`onDismiss`, `role="alert"` on errors). The
+  previous, unused `Toast` (`title`/`description`/`onClose`, four variants) is
+  gone.
+
 ## 1.2.0
 
 ### Added

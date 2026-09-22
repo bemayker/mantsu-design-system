@@ -70,6 +70,13 @@ export const gradients = {
 
 export const typography = {
   fontFamily: "'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+  /**
+   * Drawer, card and section titles. Core, Downtimes and the Order Cockpit each
+   * declared this in their own Tailwind config, identically, so the one
+   * frontend that hosts all three had none of them and rendered those titles
+   * in Lato. Added in 1.4.0.
+   */
+  titleFontFamily: "'DM Sans', 'Lato', sans-serif",
   weights: { regular: 400, medium: 500, bold: 700 },
   // name: [fontSize px, lineHeight px | 'auto', weight]
   styles: {
@@ -116,6 +123,12 @@ export const radii = {
   sm: '4px',
   md: '8px',
   lg: '12px',
+  /**
+   * Large panels: modals, drawers, dashboard cards. Same story as
+   * `typography.titleFontFamily`: three apps declared it, identically, and the
+   * shell hosting them had it from none. Added in 1.4.0.
+   */
+  xl: '16px',
   full: '9999px',
 } as const;
 
