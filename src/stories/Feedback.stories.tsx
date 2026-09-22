@@ -40,10 +40,8 @@ export const SideDrawerExample: StoryObj = {
 export const Toasts: StoryObj = {
   render: () => (
     <div className="flex flex-col gap-3">
-      <Toast variant="info" title="Sync started" description="Reporting service is catching up." onClose={() => {}} />
-      <Toast variant="success" title="Order completed" onClose={() => {}} />
-      <Toast variant="warning" title="Line paused" onClose={() => {}} />
-      <Toast variant="error" title="Connection lost" description="Retrying…" onClose={() => {}} />
+      <Toast variant="success" message="Order completed" onDismiss={() => {}} />
+      <Toast variant="error" message="Connection lost. Retrying…" onDismiss={() => {}} />
     </div>
   ),
 };
