@@ -31,6 +31,30 @@ for what counts as breaking.
   by `getByRole('switch', { name })`.
 - `Tree` takes `archivedBadgeVisible`, and `TreeLabels` takes `archivedBadge`.
   See Fixed.
+- `Table` gains the fifteen props its two vendored copies had added: `rowKey`,
+  `rowTestId`, `rowClassName`, `rowProps`, `onRowClick`, `onRowDoubleClick`,
+  `onRowContextMenu`, `testId`, `sortMode`, `loading`, `skeletonRowCount`,
+  `footerRow`, and `width` / `cellClassName` / `headerClassName` on a column.
+  Its generic constraint is relaxed from `T extends Record<string, any>` to
+  `T`, and the container scrolls horizontally rather than clipping when fixed
+  column widths exceed it. All additive: a caller that passes none of them is
+  unchanged.
+
+### Changed
+
+- **`Table`'s default cell output, for a column with no `render`.** It was
+  `String(value ?? '')`; the vendored copies returned the raw value instead.
+  Neither was adopted wholesale, because each regresses the other's consumers:
+  the raw value renders JSX and **throws** on a plain object ("Objects are not
+  valid as a React child" — verified, not assumed), and `String()` never throws
+  but prints `[object Object]` and prints `"false"` where the copies print
+  nothing.
+
+  It now renders strings, numbers, arrays and elements as themselves, renders
+  nothing for `null`, `undefined` and `false`, and stringifies anything else.
+  That is what each side wanted in the case it cared about, and a shared
+  component does not take a page down over a column someone forgot to give a
+  `render`.
 
 ### Fixed
 
