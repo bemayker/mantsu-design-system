@@ -25,6 +25,12 @@ for what counts as breaking.
   `contrast` here the whole time.
 - `useEscapeKey`, and every overlay in the package now routes Escape through
   it. See Fixed.
+- `Switch` takes `testId` and `ariaLabel`. A switch inside a settings grid has
+  no visible `label` of its own, because the grid owns it as a sibling element,
+  so the control was an unnamed `role="switch"`: unannounced, and unreachable
+  by `getByRole('switch', { name })`.
+- `Tree` takes `archivedBadgeVisible`, and `TreeLabels` takes `archivedBadge`.
+  See Fixed.
 
 ### Fixed
 
@@ -41,6 +47,16 @@ for what counts as breaking.
   implementation and fail on it.
 
   No API changed. An overlay that took `onClose` still takes `onClose`.
+
+- **An archived `Tree` node was announced to nobody.** `archived` rendered as
+  `opacity-60` and nothing else, which is meaning carried by appearance alone
+  (WCAG 2.2 SC 1.4.1) — and a real failure rather than a formal one, because in
+  the consuming apps `archived` decides whether a node may still be chosen.
+
+  The state is now always rendered for assistive technology. Whether it is also
+  **visible** is the new `archivedBadgeVisible`, off by default, so the
+  muted-only look this package chose when `archived` landed is unchanged for
+  everyone who does not ask for the badge.
 
 ## 1.1.0
 
