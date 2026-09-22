@@ -148,4 +148,16 @@ describe('ToastProvider + useToast', () => {
     errorSpy.mockRestore();
     cleanup();
   });
+
+  it('exposes the variant as a data attribute, which is what E2E matches on', () => {
+    // Downtimes' specs assert "a success toast appeared" in 57 places without
+    // knowing which toast fired, so they cannot key on the test id: that
+    // carries the caller's `id` when one is supplied. 1.3.0 dropped this
+    // attribute by comparing the two apps' PROPS rather than their output.
+    const { rerender } = render(<Toast variant="success" message="Saved" onDismiss={() => {}} />);
+    expect(document.querySelector('[data-toast-variant="success"]')).toBeInTheDocument();
+
+    rerender(<Toast variant="error" message="Failed" onDismiss={() => {}} />);
+    expect(document.querySelector('[data-toast-variant="error"]')).toBeInTheDocument();
+  });
 });

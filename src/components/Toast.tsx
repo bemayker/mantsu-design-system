@@ -20,6 +20,15 @@ import React from 'react';
  * `role="alert"` for errors and `role="status"` otherwise is load-bearing and
  * was absent from the old one: a failure has to interrupt a screen reader,
  * where a success must not.
+ *
+ * ## What 1.3.0 got wrong, recorded because the method failed, not the merge
+ *
+ * The promotion compared the two apps' props, their variant styles and their
+ * bodies, concluded they were the same component, and took Core's. They WERE
+ * the same component; Downtimes' copy also carried `data-toast-variant`, and
+ * a prop-level comparison cannot see an attribute. Fifty-seven E2E assertions
+ * matched on it. Folding a divergence in means diffing the rendered output,
+ * not the interface.
  */
 import { CheckCircleIcon, XCircleIcon, XIcon } from './Toast.icons';
 
@@ -60,6 +69,11 @@ export function Toast({ id, variant, message, onDismiss, dismissLabel = 'Dismiss
     <div
       data-testid={`toast-${testIdSuffix}`}
       role={variant === 'error' ? 'alert' : 'status'}
+      // The stable hook Downtimes' E2E specs match on, in 57 places. It is not
+      // redundant with the test id beside it: `toast-${id ?? variant}` carries
+      // the caller's id when one is supplied, so a spec asserting "a success
+      // toast appeared" cannot key on it without knowing which toast fired.
+      data-toast-variant={variant}
       className={cn(
         'flex items-center gap-3 rounded-md border px-4 py-3 shadow-mantsu-md',
         classes,
