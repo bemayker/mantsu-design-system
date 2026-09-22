@@ -2,6 +2,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from './cn';
 import { Checkbox } from './Checkbox';
+import { useEscapeKey } from './useEscapeKey';
 
 /**
  * Tree — hierarchical navigation (e.g. Site → Building → Floor → Zone → Equipment).
@@ -335,18 +336,20 @@ const ContextMenu: React.FC<{
     setPos({ x: nx, y: ny });
   }, [x, y]);
 
+  // This menu is mounted only while it is open, so it is always an active
+  // registrant. The stack is what keeps Escape from also closing a `Modal` or
+  // `SideDrawer` the menu was opened inside.
+  useEscapeKey(true, onClose);
+
   React.useEffect(() => {
     const close = () => onClose();
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('click', close);
     window.addEventListener('contextmenu', close);
     window.addEventListener('scroll', close, true);
-    window.addEventListener('keydown', onKey);
     return () => {
       window.removeEventListener('click', close);
       window.removeEventListener('contextmenu', close);
       window.removeEventListener('scroll', close, true);
-      window.removeEventListener('keydown', onKey);
     };
   }, [onClose]);
 

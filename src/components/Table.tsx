@@ -1,6 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from './cn';
+import { useEscapeKey } from './useEscapeKey';
 
 /**
  * Table — data table with optional empty state.
@@ -125,18 +126,20 @@ const ColumnMenu: React.FC<ColumnMenuProps> = ({
     if (filterable) inputRef.current?.focus();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // This menu is mounted only while it is open, so it is always an active
+  // registrant. The stack is what keeps Escape from also closing a `Modal` or
+  // `SideDrawer` the menu was opened inside.
+  useEscapeKey(true, onClose);
+
   React.useEffect(() => {
     const close = () => onClose();
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('click', close);
     window.addEventListener('contextmenu', close);
     window.addEventListener('scroll', close, true);
-    window.addEventListener('keydown', onKey);
     return () => {
       window.removeEventListener('click', close);
       window.removeEventListener('contextmenu', close);
       window.removeEventListener('scroll', close, true);
-      window.removeEventListener('keydown', onKey);
     };
   }, [onClose]);
 

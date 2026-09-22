@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from './cn';
+import { useEscapeKey } from './useEscapeKey';
 
 /** SideDrawer — slide-in panel from the right. */
 export interface SideDrawerProps {
@@ -13,11 +14,9 @@ export interface SideDrawerProps {
 export const SideDrawer: React.FC<SideDrawerProps> = ({
   open, onClose, title, children, footer, width = '420px',
 }) => {
-  React.useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    if (open) document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+  // Shared stack, same reason as `Modal`: an overlay opened inside the drawer
+  // closes itself on Escape without taking the drawer with it.
+  useEscapeKey(open, onClose);
   return (
     <div className={cn('fixed inset-0 z-50', !open && 'pointer-events-none')}>
       <div

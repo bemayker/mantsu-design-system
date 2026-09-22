@@ -6,6 +6,42 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 package follows [semantic versioning](https://semver.org/). See "Versioning" in the README
 for what counts as breaking.
 
+## 1.2.0
+
+### Added
+
+- `Dropdown`, the suite's combobox. It was written in `mantsu-core` as
+  `CustomDropdown` because this package had no select at all, and Downtimes
+  then vendored it and extended it. This is that superset, promoted: the full
+  WAI-ARIA combobox-with-listbox-popup keyboard contract (arrows, `Home`/`End`,
+  `Enter`, `Space`, `Escape`, `Tab`, typeahead, `aria-activedescendant`),
+  optional `searchable` filtering with an `onSearchChange` escape hatch for
+  server-side option sets, `defaultOpen`, `required`, `clearable`, and coloured
+  options. Its 27 tests came across unchanged from the app copy and pass
+  against it, which is the evidence the promotion is behaviour-preserving.
+- `ColorSwatch`, the read-only counterpart to `ColorSwatchPicker`. Two apps had
+  vendored it, and both recorded "validates hex through this app's own helper"
+  as a permanent divergence. They no longer need to: `normalizeHex` has been in
+  `contrast` here the whole time.
+- `useEscapeKey`, and every overlay in the package now routes Escape through
+  it. See Fixed.
+
+### Fixed
+
+- **Escape closed every open overlay at once, not the topmost one.** `Modal`,
+  `SideDrawer` and the `Table` and `Tree` context menus each attached their own
+  `document` keydown listener and closed themselves on any press, so a control
+  opened inside a dialog took the dialog down with it: the operator lost the
+  form they were filling in and got no explanation.
+
+  Nothing made this visible. Each component's own tests open exactly one
+  overlay, so all four listeners behaved perfectly in isolation, and the bug
+  only exists in composition. `useEscapeKey.test.tsx` is therefore a
+  composition suite, and three of its cases were run against the old
+  implementation and fail on it.
+
+  No API changed. An overlay that took `onClose` still takes `onClose`.
+
 ## 1.1.0
 
 ### Added
