@@ -6,6 +6,82 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 package follows [semantic versioning](https://semver.org/). See "Versioning" in the README
 for what counts as breaking.
 
+## 1.2.0
+
+### Added
+
+- `Dropdown`, the suite's combobox. It was written in `mantsu-core` as
+  `CustomDropdown` because this package had no select at all, and Downtimes
+  then vendored it and extended it. This is that superset, promoted: the full
+  WAI-ARIA combobox-with-listbox-popup keyboard contract (arrows, `Home`/`End`,
+  `Enter`, `Space`, `Escape`, `Tab`, typeahead, `aria-activedescendant`),
+  optional `searchable` filtering with an `onSearchChange` escape hatch for
+  server-side option sets, `defaultOpen`, `required`, `clearable`, and coloured
+  options. Its 27 tests came across unchanged from the app copy and pass
+  against it, which is the evidence the promotion is behaviour-preserving.
+- `ColorSwatch`, the read-only counterpart to `ColorSwatchPicker`. Two apps had
+  vendored it, and both recorded "validates hex through this app's own helper"
+  as a permanent divergence. They no longer need to: `normalizeHex` has been in
+  `contrast` here the whole time.
+- `useEscapeKey`, and every overlay in the package now routes Escape through
+  it. See Fixed.
+- `Switch` takes `testId` and `ariaLabel`. A switch inside a settings grid has
+  no visible `label` of its own, because the grid owns it as a sibling element,
+  so the control was an unnamed `role="switch"`: unannounced, and unreachable
+  by `getByRole('switch', { name })`.
+- `Tree` takes `archivedBadgeVisible`, and `TreeLabels` takes `archivedBadge`.
+  See Fixed.
+- `Table` gains the fifteen props its two vendored copies had added: `rowKey`,
+  `rowTestId`, `rowClassName`, `rowProps`, `onRowClick`, `onRowDoubleClick`,
+  `onRowContextMenu`, `testId`, `sortMode`, `loading`, `skeletonRowCount`,
+  `footerRow`, and `width` / `cellClassName` / `headerClassName` on a column.
+  Its generic constraint is relaxed from `T extends Record<string, any>` to
+  `T`, and the container scrolls horizontally rather than clipping when fixed
+  column widths exceed it. All additive: a caller that passes none of them is
+  unchanged.
+
+### Changed
+
+- **`Table`'s default cell output, for a column with no `render`.** It was
+  `String(value ?? '')`; the vendored copies returned the raw value instead.
+  Neither was adopted wholesale, because each regresses the other's consumers:
+  the raw value renders JSX and **throws** on a plain object ("Objects are not
+  valid as a React child" — verified, not assumed), and `String()` never throws
+  but prints `[object Object]` and prints `"false"` where the copies print
+  nothing.
+
+  It now renders strings, numbers, arrays and elements as themselves, renders
+  nothing for `null`, `undefined` and `false`, and stringifies anything else.
+  That is what each side wanted in the case it cared about, and a shared
+  component does not take a page down over a column someone forgot to give a
+  `render`.
+
+### Fixed
+
+- **Escape closed every open overlay at once, not the topmost one.** `Modal`,
+  `SideDrawer` and the `Table` and `Tree` context menus each attached their own
+  `document` keydown listener and closed themselves on any press, so a control
+  opened inside a dialog took the dialog down with it: the operator lost the
+  form they were filling in and got no explanation.
+
+  Nothing made this visible. Each component's own tests open exactly one
+  overlay, so all four listeners behaved perfectly in isolation, and the bug
+  only exists in composition. `useEscapeKey.test.tsx` is therefore a
+  composition suite, and three of its cases were run against the old
+  implementation and fail on it.
+
+  No API changed. An overlay that took `onClose` still takes `onClose`.
+
+- **An archived `Tree` node was announced to nobody.** `archived` rendered as
+  `opacity-60` and nothing else, which is meaning carried by appearance alone
+  (WCAG 2.2 SC 1.4.1) — and a real failure rather than a formal one, because in
+  the consuming apps `archived` decides whether a node may still be chosen.
+
+  The state is now always rendered for assistive technology. Whether it is also
+  **visible** is the new `archivedBadgeVisible`, off by default, so the
+  muted-only look this package chose when `archived` landed is unchanged for
+  everyone who does not ask for the badge.
+
 ## 1.1.0
 
 ### Added

@@ -2,6 +2,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from './cn';
 import { Checkbox } from './Checkbox';
+import { useEscapeKey } from './useEscapeKey';
 
 /**
  * Tree — hierarchical navigation (e.g. Site → Building → Floor → Zone → Equipment).
@@ -99,6 +100,20 @@ export interface TreeLabels {
   noResults?: string;
   /** Built-in search input placeholder and `aria-label`. Default `'Search…'`. */
   searchPlaceholder?: string;
+  /**
+   * How an `archived` node is announced, and optionally shown. Default
+   * `'Archived'`.
+   *
+   * It is always rendered for assistive technology. `archived` is muted with
+   * `opacity-60` and nothing else, which conveys meaning through appearance
+   * alone: a WCAG 2.2 SC 1.4.1 failure, and a real one here rather than a
+   * formal one, because in the consuming apps `archived` decides whether a
+   * node may still be chosen. A screen-reader user was told nothing at all.
+   *
+   * Whether it is also **visible** is `archivedBadgeVisible`, which is off by
+   * default so the muted-only look this package chose is unchanged.
+   */
+  archivedBadge?: string;
 }
 
 const DEFAULT_LABELS: Required<TreeLabels> = {
@@ -106,6 +121,7 @@ const DEFAULT_LABELS: Required<TreeLabels> = {
   collapse: 'Collapse',
   noResults: 'No results',
   searchPlaceholder: 'Search…',
+  archivedBadge: 'Archived',
 };
 
 export interface TreeProps {
@@ -200,6 +216,16 @@ export interface TreeProps {
 
   /** Overrides for this component's own English strings (DS-3). */
   labels?: TreeLabels;
+
+  /**
+   * Render the archived marker as a visible badge rather than only for
+   * assistive technology. Off by default: muted-only is this package's
+   * chosen look, and the screen-reader announcement is unconditional either
+   * way (`TreeLabels.archivedBadge`). Turn it on where `archived` changes
+   * what a user may do with the node, so the state is visible to everyone
+   * and not only to those who can see the 40% opacity difference.
+   */
+  archivedBadgeVisible?: boolean;
 
   className?: string;
 }
@@ -335,18 +361,20 @@ const ContextMenu: React.FC<{
     setPos({ x: nx, y: ny });
   }, [x, y]);
 
+  // This menu is mounted only while it is open, so it is always an active
+  // registrant. The stack is what keeps Escape from also closing a `Modal` or
+  // `SideDrawer` the menu was opened inside.
+  useEscapeKey(true, onClose);
+
   React.useEffect(() => {
     const close = () => onClose();
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('click', close);
     window.addEventListener('contextmenu', close);
     window.addEventListener('scroll', close, true);
-    window.addEventListener('keydown', onKey);
     return () => {
       window.removeEventListener('click', close);
       window.removeEventListener('contextmenu', close);
       window.removeEventListener('scroll', close, true);
-      window.removeEventListener('keydown', onKey);
     };
   }, [onClose]);
 
@@ -398,6 +426,7 @@ interface TreeItemProps {
   dropTarget: { id: string; position: DropPosition } | null;
   expandOnSelect: boolean;
   labels: Required<TreeLabels>;
+  archivedBadgeVisible: boolean;
   onSelect?: (id: string) => void;
   onCheck: (node: TreeNode) => void;
   toggle: (id: string) => void;
@@ -413,7 +442,7 @@ interface TreeItemProps {
 const TreeItem: React.FC<TreeItemProps> = (p) => {
   const {
     node, depth, guides, isLast, showLines, checkable, selectedId, focusId, expanded,
-    checkState, dndEnabled, dropTarget, expandOnSelect, labels,
+    checkState, dndEnabled, dropTarget, expandOnSelect, labels, archivedBadgeVisible,
     onSelect, onCheck, toggle, setFocusId, registerRef,
     onContextMenu, onDragStartNode, onDragOverNode, onDropNode, onDragEndNode,
   } = p;
@@ -517,6 +546,20 @@ const TreeItem: React.FC<TreeItemProps> = (p) => {
           <span className={cn('truncate text-body-sm', isSelected && 'font-semibold')}>{node.label}</span>
           {node.subtitle && <span className="truncate text-body-xs text-slate-500">{node.subtitle}</span>}
         </span>
+
+        {/* Archived state. Always announced, visible only on request: see
+            `TreeLabels.archivedBadge`. `sr-only` rather than `aria-label` on
+            the row, because an `aria-label` would replace the node's own
+            label instead of adding to it. */}
+        {node.archived && (
+          archivedBadgeVisible ? (
+            <span className="ml-auto shrink-0 rounded-sm bg-slate-100 px-2 py-0.5 text-body-xs-emphasis text-slate-600">
+              {labels.archivedBadge}
+            </span>
+          ) : (
+            <span className="sr-only">{labels.archivedBadge}</span>
+          )
+        )}
       </div>
 
       {hasChildren && isOpen && (
@@ -547,7 +590,7 @@ export const Tree: React.FC<TreeProps> = ({
   showLines = false, searchable = false, searchPlaceholder,
   searchQuery, onSearchQueryChange,
   contextMenuItems, draggable = false, onMove, scrollToId,
-  expandOnSelect = true, testId, labels, className,
+  expandOnSelect = true, testId, labels, archivedBadgeVisible = false, className,
 }) => {
   // `searchPlaceholder` predates `labels` and still works; `labels.searchPlaceholder`
   // wins when both are given, so a consumer migrating to `labels` does not have to
@@ -773,6 +816,7 @@ export const Tree: React.FC<TreeProps> = ({
   const itemShared = {
     showLines, checkable, selectedId, focusId, expanded, checkState,
     dndEnabled: draggable, dropTarget, expandOnSelect, labels: resolvedLabels,
+    archivedBadgeVisible,
     onSelect, onCheck, toggle, setFocusId, registerRef,
     onContextMenu, onDragStartNode: setDragId, onDragOverNode, onDropNode, onDragEndNode,
   };

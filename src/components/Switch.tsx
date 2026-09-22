@@ -8,10 +8,20 @@ export interface SwitchProps {
   disabled?: boolean;
   onChange?: (checked: boolean) => void;
   label?: string;
+  /** `data-testid` on the `role="switch"` button. */
+  testId?: string;
+  /**
+   * Accessible name for a switch rendered without a visible `label`, which is
+   * what a settings grid produces: the field's label is a sibling element the
+   * grid owns, so the button would otherwise be an unnamed `role="switch"`,
+   * unreachable by `getByRole('switch', { name })` and unannounced by a
+   * screen reader. Prefer `label` where a visible one belongs to the control.
+   */
+  ariaLabel?: string;
 }
 
 export const Switch: React.FC<SwitchProps> = ({
-  checked, defaultChecked, disabled, onChange, label,
+  checked, defaultChecked, disabled, onChange, label, testId, ariaLabel,
 }) => {
   const [internal, setInternal] = React.useState(defaultChecked ?? false);
   const isOn = checked ?? internal;
@@ -27,6 +37,8 @@ export const Switch: React.FC<SwitchProps> = ({
         type="button"
         role="switch"
         aria-checked={isOn}
+        aria-label={ariaLabel}
+        data-testid={testId}
         disabled={disabled}
         onClick={toggle}
         className={cn(

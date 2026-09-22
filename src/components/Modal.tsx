@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from './cn';
+import { useEscapeKey } from './useEscapeKey';
 
 /** Modal — centered dialog with overlay. */
 export interface ModalProps {
@@ -11,11 +12,10 @@ export interface ModalProps {
   className?: string;
 }
 export const Modal: React.FC<ModalProps> = ({ open, onClose, title, children, footer, className }) => {
-  React.useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    if (open) document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+  // Through the shared stack, not a listener of its own: a dropdown or a
+  // context menu open inside this dialog must take the Escape press itself and
+  // leave the dialog standing.
+  useEscapeKey(open, onClose);
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">

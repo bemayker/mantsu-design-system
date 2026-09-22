@@ -1,9 +1,18 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
+
 import { cn } from './cn';
+import { useEscapeKey } from './useEscapeKey';
 
 /**
  * Table — data table with optional empty state.
+ *
+ * This is the superset of the two copies that had been vendored out of here
+ * and extended in place: Core added row hooks, test ids, external sort,
+ * loading skeletons and column sizing; Downtimes added `rowProps`,
+ * `onRowDoubleClick` and `footerRow` on top. Both VENDORED files said the
+ * additions belonged upstream and neither was app-specific. They are upstream
+ * now, so a consuming app imports this instead of carrying a copy.
  *
  * Header interactions:
  *  - Click a (sortable) header to cycle its sort: ascending → descending → off.
@@ -25,6 +34,12 @@ export interface Column<T> {
   filterable?: boolean;
   /** Value used for sorting / filtering. Defaults to `row[key]`. Use for computed columns. */
   accessor?: (row: T) => string | number | null | undefined;
+  /** fixed column width in px (drives `<colgroup>` + `table-fixed`). */
+  width?: number;
+  /** extra classes on each body/skeleton `<td>` (e.g. responsive collapse). */
+  cellClassName?: string;
+  /** extra classes on the header `<th>` (e.g. responsive collapse). */
+  headerClassName?: string;
 }
 
 export type SortDirection = 'asc' | 'desc';
@@ -34,6 +49,9 @@ export interface SortState {
 }
 
 export type TableDensity = 'compact' | 'large';
+
+/** server-sorted screens report sort but must not reorder client-side. */
+export type SortMode = 'internal' | 'external';
 
 export interface TableProps<T> {
   columns: Column<T>[];
@@ -52,6 +70,55 @@ export interface TableProps<T> {
   onSortChange?: (sort: SortState | null) => void;
   /** Notified whenever the per-column search values change. */
   onColumnFiltersChange?: (filters: Record<string, string>) => void;
+  /**
+   * in `'external'` mode the component reports sort
+   * changes via `onSortChange` but does NOT reorder rows client-side (the rows
+   * are already server-sorted and server-paginated). Column search stays
+   * client-side in both modes. Default `'internal'` (upstream behaviour).
+   */
+  sortMode?: SortMode;
+  /** container `data-testid` pass-through. */
+  testId?: string;
+  /** stable row key (replaces upstream `key={index}`). */
+  rowKey?: (row: T, index: number) => string | number;
+  /** per-row `data-testid`. */
+  rowTestId?: (row: T, index: number) => string | undefined;
+  /** per-row extra classes (selection, archived, cursor). */
+  rowClassName?: (row: T) => string | undefined;
+  /**
+   * extra attributes on each body `<tr>`, so a screen can
+   * convey state that colour alone cannot. The concrete need is
+   * `aria-selected`: `coding_standards.md` §3.2 requires interactive state to be
+   * accessible, and every hand-written table this component replaces set it on
+   * the selected row. Without a hook, migrating onto this component would drop
+   * accessible selection state on every screen at once and leave only a tint,
+   * which is the same defect already raised against the DS Tree's opacity-only
+   * archived state.
+   */
+  rowProps?: (row: T) => Record<string, string | boolean | undefined> | undefined;
+  /** row left-click handler. */
+  onRowClick?: (row: T) => void;
+  /** row right-click handler. */
+  onRowContextMenu?: (row: T, event: React.MouseEvent) => void;
+  /**
+   * row double-click handler, symmetric with
+   * `onRowClick` and `onRowContextMenu`. A single click and a double click are
+   * different intents on a selectable row (select vs. open), and a table that
+   * offers only the first forces the second onto a separate control.
+   */
+  onRowDoubleClick?: (row: T) => void;
+  /** render skeleton rows instead of the body. */
+  loading?: boolean;
+  /** number of skeleton rows while `loading`. */
+  skeletonRowCount?: number;
+  /**
+   * a `<tfoot>` row, for a totals line that must stay
+   * column-aligned with the body. Rendering it as a sibling element below the
+   * table instead would lose that alignment, which is the whole point of a
+   * totals row. Supply the `<tr>` (and its `<td>`s) yourself; the component
+   * only provides the `<tfoot>` wrapper and does not compute anything.
+   */
+  footerRow?: React.ReactNode;
 }
 
 /* ------------------------------------------------------------------ icons */
@@ -125,18 +192,20 @@ const ColumnMenu: React.FC<ColumnMenuProps> = ({
     if (filterable) inputRef.current?.focus();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Mounted only while open, so always an active registrant. The shared stack
+  // is what keeps Escape from also closing a `Modal` or `SideDrawer` this menu
+  // was opened inside.
+  useEscapeKey(true, onClose);
+
   React.useEffect(() => {
     const close = () => onClose();
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('click', close);
     window.addEventListener('contextmenu', close);
     window.addEventListener('scroll', close, true);
-    window.addEventListener('keydown', onKey);
     return () => {
       window.removeEventListener('click', close);
       window.removeEventListener('contextmenu', close);
       window.removeEventListener('scroll', close, true);
-      window.removeEventListener('keydown', onKey);
     };
   }, [onClose]);
 
@@ -215,7 +284,7 @@ const ColumnMenu: React.FC<ColumnMenuProps> = ({
 
 /* ---------------------------------------------------------------------- table */
 
-const alignClass = (align?: Column<any>['align']) =>
+const alignClass = (align?: Column<unknown>['align']) =>
   align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left';
 
 const DENSITY = {
@@ -223,10 +292,15 @@ const DENSITY = {
   large: { th: 'px-4 py-3 text-body-sm-emphasis', td: 'px-4 py-3 text-body', options: 'size-6' },
 } as const;
 
-export function Table<T extends Record<string, any>>({
+// the generic constraint was relaxed from
+// `T extends Record<string, any>` to `T`; row values are read through a cast so
+// the adapter can pass its unconstrained row types. See VENDORED.md.
+export function Table<T>({
   columns, data, emptyState, className,
   sortable = true, filterable = true, density = 'compact',
   sort: sortProp, defaultSort = null, onSortChange, onColumnFiltersChange,
+  sortMode = 'internal', testId, rowKey, rowTestId, rowClassName, rowProps, footerRow,
+  onRowClick, onRowContextMenu, onRowDoubleClick, loading = false, skeletonRowCount = 4,
 }: TableProps<T>) {
   const d = DENSITY[density];
   const sortControlled = sortProp !== undefined;
@@ -268,10 +342,11 @@ export function Table<T extends Record<string, any>>({
 
   const valueOf = React.useCallback((col: Column<T>, row: T) => {
     if (col.accessor) return col.accessor(row);
-    return row[col.key as keyof T];
+    return (row as Record<string, unknown>)[col.key as string] as string | number | null | undefined;
   }, []);
 
-  // filter → sort (derived view)
+  // filter → sort (derived view). client-side sort is
+  // skipped in `'external'` mode; column search stays client-side in both.
   const view = React.useMemo(() => {
     let rows = data;
 
@@ -287,7 +362,7 @@ export function Table<T extends Record<string, any>>({
       );
     }
 
-    if (sort) {
+    if (sortMode === 'internal' && sort) {
       const col = colOf(sort.key);
       if (col) {
         const dir = sort.direction === 'asc' ? 1 : -1;
@@ -303,7 +378,7 @@ export function Table<T extends Record<string, any>>({
       }
     }
     return rows;
-  }, [data, filters, sort, colOf, valueOf]);
+  }, [data, filters, sort, sortMode, colOf, valueOf]);
 
   const openMenu = (e: React.MouseEvent, key: string) => {
     e.stopPropagation(); // don't also toggle the header sort / close via window listener
@@ -311,9 +386,61 @@ export function Table<T extends Record<string, any>>({
     setMenu({ key, x: rect.right - 220, y: rect.bottom + 4 });
   };
 
+  /**
+   * A column with no `render` shows its raw row value when React can draw it,
+   * and `String(value)` when it cannot.
+   *
+   * This is the one place the two vendored copies and this package disagreed
+   * on behaviour rather than on a missing prop, so it is neither of their
+   * answers. The copies returned the raw value, which renders JSX and numbers
+   * correctly and **throws** on a plain object ("Objects are not valid as a
+   * React child"). This package returned `String(value ?? '')`, which never
+   * throws and prints `[object Object]` for that same object, and prints
+   * `"false"` where the copies print nothing.
+   *
+   * Taking either one wholesale would have regressed the other's consumers.
+   * The rule below does what each wanted in the case it cared about, and a
+   * shared component never crashes a page over a column someone forgot to
+   * give a `render`.
+   */
+  const renderCell = (c: Column<T>, row: T): React.ReactNode => {
+    if (c.render) return c.render(row);
+    const value = (row as Record<string, unknown>)[c.key as string];
+    if (value == null || value === false) return null;
+    if (
+      typeof value === 'string' ||
+      typeof value === 'number' ||
+      React.isValidElement(value) ||
+      Array.isArray(value)
+    ) {
+      return value as React.ReactNode;
+    }
+    return String(value);
+  };
+
   return (
-    <div className={cn('overflow-hidden rounded-lg border border-slate-200 bg-white', className)}>
-      <table className="w-full border-collapse">
+    <div
+      data-testid={testId}
+      // `overflow-x-auto` (not `-hidden`) so a table whose
+      // fixed column widths exceed the container scrolls horizontally instead of
+      // clipping its right-hand columns. Tables that fit show no scrollbar.
+      className={cn('overflow-x-auto rounded-lg border border-slate-200 bg-white', className)}
+    >
+      <table className={cn('w-full border-collapse', columns.some((c) => c.width !== undefined) && 'table-fixed')}>
+        {columns.some((c) => c.width !== undefined) && (
+          <colgroup>
+            {columns.map((c) => (
+              <col
+                key={String(c.key)}
+                style={
+                  c.width !== undefined
+                    ? { width: c.width, minWidth: c.width, maxWidth: c.width }
+                    : undefined
+                }
+              />
+            ))}
+          </colgroup>
+        )}
         <thead>
           <tr className="bg-frost">
             {columns.map((c) => {
@@ -325,11 +452,13 @@ export function Table<T extends Record<string, any>>({
               return (
                 <th
                   key={key}
+                  data-testid={`data-table-header-${key}`}
                   aria-sort={active === 'asc' ? 'ascending' : active === 'desc' ? 'descending' : 'none'}
                   className={cn(
                     'border-b border-slate-200 text-slate-600',
                     d.th,
-                    alignClass(c.align)
+                    alignClass(c.align),
+                    c.headerClassName
                   )}
                 >
                   <div className="flex items-center gap-1">
@@ -344,6 +473,7 @@ export function Table<T extends Record<string, any>>({
                         <button
                           type="button"
                           onClick={() => cycleSort(key)}
+                          data-testid={`data-table-sort-${key}`}
                           className="group inline-flex items-center gap-1 rounded-sm outline-none hover:text-midnight focus-visible:ring-2 focus-visible:ring-primary-blue/40"
                           aria-label={`Sort by ${c.header}`}
                         >
@@ -380,7 +510,22 @@ export function Table<T extends Record<string, any>>({
           </tr>
         </thead>
         <tbody>
-          {view.length === 0 ? (
+          {loading ? (
+            // skeleton rows replace the body while loading.
+            Array.from({ length: skeletonRowCount }, (_, i) => (
+              <tr
+                key={`skeleton-row-${i}`}
+                data-testid={`data-table-skeleton-row-${i}`}
+                className="border-b border-slate-200"
+              >
+                {columns.map((c) => (
+                  <td key={String(c.key)} className={cn(d.td, alignClass(c.align), c.cellClassName)}>
+                    <div className="h-4 w-full max-w-[80%] animate-pulse rounded bg-slate-200" />
+                  </td>
+                ))}
+              </tr>
+            ))
+          ) : view.length === 0 ? (
             <tr>
               <td colSpan={columns.length} className="px-4 py-12 text-center">
                 {emptyState ?? <span className="text-body text-slate-500">No data</span>}
@@ -388,23 +533,35 @@ export function Table<T extends Record<string, any>>({
             </tr>
           ) : (
             view.map((row, i) => (
-              <tr key={i} className="transition-colors hover:bg-slate-50">
+              <tr
+                key={rowKey ? rowKey(row, i) : i}
+                data-testid={rowTestId?.(row, i)}
+                onClick={onRowClick ? () => onRowClick(row) : undefined}
+                onDoubleClick={onRowDoubleClick ? () => onRowDoubleClick(row) : undefined}
+                onContextMenu={onRowContextMenu ? (e) => onRowContextMenu(row, e) : undefined}
+                className={cn('transition-colors hover:bg-slate-50', rowClassName?.(row))}
+                {...(rowProps?.(row) ?? {})}
+              >
                 {columns.map((c) => (
                   <td
                     key={String(c.key)}
                     className={cn(
                       'border-b border-slate-200 text-midnight',
                       d.td,
-                      alignClass(c.align)
+                      alignClass(c.align),
+                      c.cellClassName
                     )}
                   >
-                    {c.render ? c.render(row) : String(row[c.key as keyof T] ?? '')}
+                    {renderCell(c, row)}
                   </td>
                 ))}
               </tr>
             ))
           )}
         </tbody>
+        {/* totals row, inside the table so it stays
+          * column-aligned with the body. */}
+        {footerRow && <tfoot>{footerRow}</tfoot>}
       </table>
 
       {menu && (() => {
