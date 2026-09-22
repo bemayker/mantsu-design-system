@@ -52,5 +52,16 @@ describe('tailwind preset', () => {
     expect(preset.theme.extend.backgroundImage['primary-gradient']).toBe(tokens.gradients.primary);
     expect(preset.theme.extend.boxShadow['mantsu-lg']).toBe(tokens.shadows.large);
     expect(preset.theme.extend.borderRadius.md).toBe(tokens.radii.md);
+    expect(preset.theme.extend.borderRadius.xl).toBe(tokens.radii.xl);
+  });
+
+  it('carries the title face and the large radius the three apps each declared (1.4.0)', () => {
+    // Core, Downtimes and the Order Cockpit all extended the preset with
+    // exactly these two values. The suite shell extends nothing, so until they
+    // lived here `font-title` generated no CSS in it at all and `rounded-xl`
+    // fell back to Tailwind's 12px.
+    expect(preset.theme.extend.fontFamily.title).toEqual(['DM Sans', 'Lato', 'sans-serif']);
+    expect(tokens.typography.titleFontFamily).toBe("'DM Sans', 'Lato', sans-serif");
+    expect(preset.theme.extend.borderRadius.xl).toBe('16px');
   });
 });

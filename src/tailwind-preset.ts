@@ -86,6 +86,8 @@ export const preset: MantsuTailwindPreset = {
       },
       fontFamily: {
         sans: ['Lato', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
+        // `font-title`. `tokens.typography.titleFontFamily`; loaded by `styles.css`.
+        title: ['DM Sans', 'Lato', 'sans-serif'],
       },
       fontSize: {
         h1: ['36px', { lineHeight: '40px', fontWeight: '700' }],
@@ -109,6 +111,9 @@ export const preset: MantsuTailwindPreset = {
         sm: '4px',
         md: '8px',
         lg: '12px',
+        // `rounded-xl`. Tailwind's own default is 12px, the same as `lg`, which
+        // is the value every app used to override.
+        xl: '16px',
       },
     },
   },
