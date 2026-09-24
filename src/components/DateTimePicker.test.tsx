@@ -129,6 +129,30 @@ describe('DateTimePicker', () => {
     expect(timeInput()).toHaveValue('');
   });
 
+  it('follows an outside reset to null while one half is cleared', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const { rerender } = render(<DateTimePicker value="2026-07-09T08:00" onChange={onChange} testId="dtp" />);
+
+    await user.clear(timeInput());
+    expect(onChange).not.toHaveBeenCalled();
+    rerender(<DateTimePicker value={null} onChange={onChange} testId="dtp" />);
+
+    expect(dateInput()).toHaveValue('');
+    expect(timeInput()).toHaveValue('');
+  });
+
+  it('keeps a reported value when the consumer echoes it back', () => {
+    const spy = vi.fn();
+    render(<Harness initial="2026-07-09T08:00" onChangeSpy={spy} />);
+
+    fireEvent.change(timeInput(), { target: { value: '09:00' } });
+
+    expect(spy).toHaveBeenCalledWith('2026-07-09T09:00');
+    expect(dateInput()).toHaveValue('09/07/2026');
+    expect(timeInput()).toHaveValue('09:00');
+  });
+
   it('derives the calendar ids from the date half and applies min to it', async () => {
     const spy = vi.fn();
     const user = userEvent.setup();

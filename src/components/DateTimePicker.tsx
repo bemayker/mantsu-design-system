@@ -114,24 +114,33 @@ export function DateTimePicker({
   const [left, setLeft] = useState(false);
   const groupRef = useRef<HTMLDivElement>(null);
 
-  // An outside change of `value` resets both halves; the value this group
-  // just reported comes back equal to its own parts and changes nothing.
+  // The last value this group received or reported. An incoming `value` that
+  // differs from it came from outside and resets both halves; the value the
+  // group just reported comes back equal to it and changes nothing. Comparing
+  // against the joined parts instead would miss a reset to `null` while one
+  // half is cleared, since a half-filled pair also joins to `null`.
+  const lastValue = useRef(value);
   useEffect(() => {
-    if (joinParts(datePart, timePart) === value) return;
+    if (value === lastValue.current) return;
+    lastValue.current = value;
     const [nextDate, nextTime] = splitValue(value);
     setDatePart(nextDate);
     setTimePart(nextTime);
-    // Only `value` drives this; the parts are compared, not tracked.
   }, [value]);
+
+  const emit = (next: string | null) => {
+    lastValue.current = next;
+    onChange(next);
+  };
 
   const report = (date: string | null, time: string | null) => {
     if (!validity.current.date || !validity.current.time) return;
     if (date === null && time === null) {
-      if (value !== null) onChange(null);
+      if (value !== null) emit(null);
       return;
     }
     const joined = joinParts(date, time);
-    if (joined !== null && joined !== value) onChange(joined);
+    if (joined !== null && joined !== value) emit(joined);
   };
 
   const handleDateChange = (next: string | null) => {

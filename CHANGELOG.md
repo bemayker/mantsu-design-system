@@ -36,7 +36,7 @@ for what counts as breaking.
 `DatePicker` and `TimeField` put `data-testid={testId}` on the **text input**,
 not on a wrapper, and derive the popover's ids from it (`-toggle`, `-calendar`,
 `-prev`, `-next`, `-month-label`, `-grid`, `-day-YYYY-MM-DD`, `-today`,
-`-clear`, `-error`). Every spec that drove the native date inputs types into
+`-clear`, `-error`, `-hint`). Every spec that drove the native date inputs types into
 the element it names, so they keep working with a new value shape and no id
 rewrites. `DateTimePicker` has two inputs, so its `testId` names the group and
 the inputs are `${testId}-date` and `${testId}-time`.

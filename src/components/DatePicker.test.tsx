@@ -405,6 +405,19 @@ describe('DatePicker: calendar popover', () => {
     expect(input()).toHaveValue('02/08/2026');
   });
 
+  it('keeps keyboard focus in the grid when a header button is clicked', async () => {
+    const user = userEvent.setup();
+    render(<Harness initial="2026-07-06" />);
+    await user.click(input());
+    await user.keyboard('{ArrowDown}');
+    expect(screen.getByTestId('dp-day-2026-07-06')).toHaveFocus();
+
+    await user.click(screen.getByTestId('dp-next'));
+
+    expect(screen.getByTestId('dp-month-label')).toHaveTextContent('August 2026');
+    expect(screen.getByTestId('dp-day-2026-08-06')).toHaveFocus();
+  });
+
   it('navigates months with the header buttons', async () => {
     const user = userEvent.setup();
     render(<Harness initial="2026-01-15" />);
@@ -576,7 +589,9 @@ describe('DatePicker: app language, not the OS', () => {
 describe('DatePicker: no Date built from the value, no browser time zone', () => {
   const originalTz = process.env.TZ;
   afterEach(() => {
-    process.env.TZ = originalTz;
+    // Assigning undefined would store the string 'undefined'.
+    if (originalTz === undefined) delete process.env.TZ;
+    else process.env.TZ = originalTz;
     vi.unstubAllGlobals();
   });
 

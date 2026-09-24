@@ -241,6 +241,24 @@ export function resolveLocale(locale?: string): string {
   }
 }
 
+/**
+ * Formatters are cached per locale and options: a popover render names 42 day
+ * cells, 7 weekdays and the month, and constructing an `Intl.DateTimeFormat`
+ * is the expensive part of formatting.
+ */
+const formatterCache = new Map<string, Intl.DateTimeFormat>();
+
+function formatter(locale: string | undefined, options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+  const resolved = resolveLocale(locale);
+  const key = `${resolved}|${JSON.stringify(options)}`;
+  let cached = formatterCache.get(key);
+  if (!cached) {
+    cached = new Intl.DateTimeFormat(resolved, { ...options, timeZone: 'UTC' });
+    formatterCache.set(key, cached);
+  }
+  return cached;
+}
+
 /** A `Date` at UTC midnight of the given parts, for `Intl` formatting only. */
 function utcDate({ year, month, day }: DateParts): Date {
   const date = new Date(0);
@@ -251,29 +269,20 @@ function utcDate({ year, month, day }: DateParts): Date {
 
 /** `'July 2026'`, `'juli 2026'`. */
 export function formatMonthYear(year: number, month: number, locale?: string): string {
-  return new Intl.DateTimeFormat(resolveLocale(locale), {
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
-  }).format(utcDate({ year, month, day: 1 }));
+  return formatter(locale, { month: 'long', year: 'numeric' }).format(utcDate({ year, month, day: 1 }));
 }
 
 /** `'Monday 6 July 2026'`, `'maandag 6 juli 2026'`: the accessible name of a day cell. */
 export function formatFullDate(iso: string, locale?: string): string {
-  return new Intl.DateTimeFormat(resolveLocale(locale), {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
-  }).format(utcDate(requireParts(iso)));
+  return formatter(locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(
+    utcDate(requireParts(iso)),
+  );
 }
 
 /** Monday-first weekday names, short and long, in the given locale. */
 export function weekdayNames(locale?: string): Array<{ short: string; long: string }> {
-  const resolved = resolveLocale(locale);
-  const short = new Intl.DateTimeFormat(resolved, { weekday: 'short', timeZone: 'UTC' });
-  const long = new Intl.DateTimeFormat(resolved, { weekday: 'long', timeZone: 'UTC' });
+  const short = formatter(locale, { weekday: 'short' });
+  const long = formatter(locale, { weekday: 'long' });
   // 2024-01-01 was a Monday.
   return Array.from({ length: 7 }, (_, index) => {
     const date = utcDate({ year: 2024, month: 1, day: 1 + index });

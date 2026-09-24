@@ -214,7 +214,8 @@ render from.
 app should use: the native `type="date"`, `type="time"` and `type="datetime-local"`
 inputs render in the operating system's locale, not the app's language (CORE-FB-23).
 They take and return ISO strings, never `Date` objects, and put `testId` on the input
-the user types into.
+the user types into (`DateTimePicker`, which has two, on the group: its inputs are
+`${testId}-date` and `${testId}-time`).
 
 `scopesFromManifest` builds the settings scope column from a manifest. Use it rather
 than assembling the list per app: it is where the rules live about which scopes exist

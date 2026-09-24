@@ -304,6 +304,14 @@ export function DatePicker({
     focusDayOnRender.current = true;
   };
 
+  // A header click must not strand keyboard focus: when a day held it, that
+  // day unmounts with the old month, so focus follows to the new one.
+  const shiftMonth = (months: number) => {
+    const next = addMonths(focusedIso, months);
+    if (gridRef.current?.contains(document.activeElement)) focusDayOnRender.current = true;
+    setFocusedIso(next);
+  };
+
   const selectDay = (iso: string) => {
     if (!isWithinBounds(iso, min, max)) return;
     typed.replace(iso);
@@ -431,7 +439,7 @@ export function DatePicker({
                 type="button"
                 data-testid={`${testId}-prev`}
                 aria-label={resolvedLabels.previousMonth}
-                onClick={() => setFocusedIso(addMonths(focusedIso, -1))}
+                onClick={() => shiftMonth(-1)}
                 className="flex h-8 w-8 items-center justify-center rounded-sm text-slate-500 hover:bg-frost focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue"
               >
                 <ChevronLeftIcon className="h-4 w-4" />
@@ -447,7 +455,7 @@ export function DatePicker({
                 type="button"
                 data-testid={`${testId}-next`}
                 aria-label={resolvedLabels.nextMonth}
-                onClick={() => setFocusedIso(addMonths(focusedIso, 1))}
+                onClick={() => shiftMonth(1)}
                 className="flex h-8 w-8 items-center justify-center rounded-sm text-slate-500 hover:bg-frost focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue"
               >
                 <ChevronRightIcon className="h-4 w-4" />
