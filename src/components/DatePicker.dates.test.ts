@@ -87,7 +87,7 @@ describe('parseDisplayDate', () => {
     expect(parseDisplayDate(text)).toEqual({ status: 'invalid', yearDigits });
   });
 
-  it.each(['abc', '06/07/2026x', '06/07/20261', '2026-07-06', '06//2026', '123/07/2026'])(
+  it.each(['abc', '06/07/2026x', '06/07/20261', '2026-07-06', '06//2026', '123/07/2026', '05/0226'])(
     'rejects the shape of %s outright',
     (text) => {
       expect(parseDisplayDate(text).status).toBe('invalid');

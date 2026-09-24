@@ -315,7 +315,7 @@ describe('DatePicker: digit-only entry (CORE-FB-23, no separator key on the iPad
     expect(input()).toHaveValue('05/02/2026');
   });
 
-  it('never commits the eight-digit-year date, even the six-digit 050220 (05/02/2020) it passes through on the way', async () => {
+  it('commits only the eight-digit date, never the six-digit 050220 (05/02/2020) it passes through on the way', async () => {
     const spy = vi.fn();
     const user = userEvent.setup();
     render(<Harness onChangeSpy={spy} />);

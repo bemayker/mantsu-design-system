@@ -136,6 +136,31 @@ describe('TimeField', () => {
     expect(input()).toHaveValue('08:05');
   });
 
+  it('canonicalises a digit-only 0930 on blur, reported once (tablet keypad)', async () => {
+    const spy = vi.fn();
+    const user = userEvent.setup();
+    render(<Harness onChangeSpy={spy} />);
+
+    await user.type(input(), '0930');
+    await user.tab();
+
+    expect(input()).toHaveValue('09:30');
+    expect(spy.mock.calls).toEqual([['09:30']]);
+  });
+
+  it('holds a digit-only 930 until blur, then canonicalises it (tablet keypad)', async () => {
+    const spy = vi.fn();
+    const user = userEvent.setup();
+    render(<Harness onChangeSpy={spy} />);
+
+    await user.type(input(), '930');
+    expect(spy).not.toHaveBeenCalled();
+    await user.tab();
+
+    expect(spy).toHaveBeenCalledWith('09:30');
+    expect(input()).toHaveValue('09:30');
+  });
+
   it('keeps an invalid time as typed, marks it invalid and reports nothing', async () => {
     const spy = vi.fn();
     const user = userEvent.setup();
