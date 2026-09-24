@@ -30,6 +30,14 @@ for what counts as breaking.
   `<input type="datetime-local">`. Its value is the same `YYYY-MM-DDTHH:MM`
   string the native input produced, so consumers' wire conversions stay
   byte-identical; a half-filled entry reports nothing.
+- `DatePicker` and `TimeField` also read digits with no separator at all:
+  `DDMMYYYY` or `DDMMYY` for the date, `HHMM` or `HMM` for the time. Both
+  fields render with `inputMode="numeric"`, and the iPad numeric keypad it
+  opens has no `/`, `-`, `.` or `:` key, so an operator on a shop-floor tablet
+  had no separator to type. `DDMMYYYY` and `HHMM` commit on the completing
+  keystroke, the same as their separated equivalents; `DDMMYY` and `HMM`
+  commit only on blur or Enter, since either is also the start of a longer
+  entry (`DDMMYY` of `DDMMYYYY`, `HMM` of `HHMM`).
 
 ### Test ids: a deliberate difference from `Dropdown`
 

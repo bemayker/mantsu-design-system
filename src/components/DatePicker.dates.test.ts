@@ -118,6 +118,53 @@ describe('parseDisplayDate', () => {
   });
 });
 
+describe('parseDisplayDate: digit-only entry (CORE-FB-23, no separator key on the iPad keypad)', () => {
+  it('reads eight digits as DDMMYYYY, flagged four-digit-year like a completed separated entry', () => {
+    expect(parseDisplayDate('05022026')).toEqual({ status: 'valid', iso: '2026-02-05', yearDigits: 4 });
+  });
+
+  it('reads six digits as DDMMYY via the 20xx rule, flagged two-digit-year like a deferred separated entry', () => {
+    expect(parseDisplayDate('050226')).toEqual({ status: 'valid', iso: '2026-02-05', yearDigits: 2 });
+  });
+
+  it.each(['1', '05', '050', '0502', '05022', '0502202'])(
+    'treats the %s-digit prefix as still being typed, since it could still reach 6 or 8 digits',
+    (text) => {
+      expect(parseDisplayDate(text).status).toBe('incomplete');
+    },
+  );
+
+  it.each(['502202611', '50220261123456'])('rejects %s outright: too many digits for either form', (text) => {
+    expect(parseDisplayDate(text).status).toBe('invalid');
+  });
+
+  it('rejects 31022026 (31 February) as not a calendar date', () => {
+    expect(parseDisplayDate('31022026')).toEqual({ status: 'invalid', yearDigits: 4 });
+  });
+
+  it('accepts the leap-year digit-only entry 29022028', () => {
+    expect(parseDisplayDate('29022028')).toEqual({ status: 'valid', iso: '2028-02-29', yearDigits: 4 });
+  });
+
+  it('rejects the non-leap-year digit-only entry 29022027', () => {
+    expect(parseDisplayDate('29022027')).toEqual({ status: 'invalid', yearDigits: 4 });
+  });
+
+  it('applies inclusive min/max bounds to digit-only entries the same as separated ones', () => {
+    const bounds = { min: '2026-07-01', max: '2026-07-31' };
+    expect(parseDisplayDate('01072026', bounds).status).toBe('valid');
+    expect(parseDisplayDate('30062026', bounds)).toEqual({ status: 'beforeMin', iso: '2026-06-30', yearDigits: 4 });
+    expect(parseDisplayDate('01082026', bounds)).toEqual({ status: 'afterMax', iso: '2026-08-01', yearDigits: 4 });
+    expect(parseDisplayDate('010726', bounds)).toEqual({ status: 'valid', iso: '2026-07-01', yearDigits: 2 });
+    expect(parseDisplayDate('300626', bounds)).toEqual({ status: 'beforeMin', iso: '2026-06-30', yearDigits: 2 });
+  });
+
+  it('still reads separated forms unchanged once digit-only parsing is in the mix', () => {
+    expect(parseDisplayDate('05/02/2026')).toEqual({ status: 'valid', iso: '2026-02-05', yearDigits: 4 });
+    expect(parseDisplayDate('5.2.26')).toEqual({ status: 'valid', iso: '2026-02-05', yearDigits: 2 });
+  });
+});
+
 describe('day arithmetic', () => {
   it('counts days from 1970-01-01 and back, exactly, across centuries', () => {
     expect(toDayNumber({ year: 1970, month: 1, day: 1 })).toBe(0);

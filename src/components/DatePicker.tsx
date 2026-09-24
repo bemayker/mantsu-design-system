@@ -162,10 +162,16 @@ const DAY_CELL_COUNT_PER_WEEK = 7;
  * passed through a `Date`, so no browser time zone can move it by a day.
  *
  * **Typing.** Separators `/`, `-`, `.`; single-digit day and month allowed.
- * - A four-digit year reports the value on the keystroke that completes it
- *   (so Playwright's `fill('06/07/2026')` works without a blur).
- * - A two-digit year means 20xx and is reported on blur or Enter only, then
- *   rewritten as four digits: `05/02/20` is also the start of `05/02/2026`.
+ * Digits with no separator at all are also read, `DDMMYYYY` or `DDMMYY`
+ * (CORE-FB-23: the iPad numeric keypad this field's `inputMode="numeric"`
+ * opens has no `/`, `-`, `.` or `:` key for an operator on a shop-floor
+ * tablet to press).
+ * - A four-digit year, separated or not (`06/07/2026` or `06072026`), reports
+ *   the value on the keystroke that completes it (so Playwright's
+ *   `fill('06/07/2026')` works without a blur).
+ * - A two-digit year, separated or not (`05/02/26` or `050226`), means 20xx
+ *   and is reported on blur or Enter only, then rewritten as four digits:
+ *   `05/02/20` and `050226` are also the start of a four-digit-year entry.
  * - Blur rewrites a valid entry in canonical `DD/MM/YYYY`; an emptied field
  *   reports `null`.
  * - An invalid or out-of-range entry keeps its text, sets `aria-invalid`,

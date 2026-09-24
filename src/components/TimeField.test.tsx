@@ -25,7 +25,18 @@ describe('parseTimeText', () => {
     expect(parseTimeText('960')).toEqual({ status: 'invalid', deferred: true });
   });
 
-  it.each(['24:00', '12:60', '2400', '99:99'])('rejects %s', (text) => {
+  it.each([
+    ['0930', '09:30'],
+    ['930', '09:30'],
+    ['2359', '23:59'],
+  ])(
+    'reads the digit-only tablet-keypad entry %s as %s (CORE-FB-23: no `:` key on the iPad numeric keypad)',
+    (text, value) => {
+      expect(parseTimeText(text)).toMatchObject({ status: 'valid', value });
+    },
+  );
+
+  it.each(['24:00', '12:60', '2400', '99:99', '0960'])('rejects %s', (text) => {
     expect(parseTimeText(text)).toEqual({ status: 'invalid', deferred: false });
   });
 

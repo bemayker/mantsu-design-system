@@ -261,6 +261,146 @@ describe('DatePicker: the field', () => {
   });
 });
 
+describe('DatePicker: digit-only entry (CORE-FB-23, no separator key on the iPad keypad)', () => {
+  it('reports an eight-digit DDMMYYYY date on the keystroke that completes it, before any blur', async () => {
+    const spy = vi.fn();
+    const user = userEvent.setup();
+    render(<Harness onChangeSpy={spy} />);
+
+    await user.type(input(), '05022026');
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith('2026-02-05');
+    // Still focused: left as typed until the field is left, same as the separated form.
+    expect(input()).toHaveValue('05022026');
+
+    await user.tab();
+    expect(input()).toHaveValue('05/02/2026');
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it('accepts eight digits delivered in one change event, the way Playwright fill() does', () => {
+    const spy = vi.fn();
+    render(<Harness onChangeSpy={spy} />);
+
+    fireEvent.change(input(), { target: { value: '05022026' } });
+
+    expect(spy).toHaveBeenCalledWith('2026-02-05');
+  });
+
+  it('holds a six-digit DDMMYY entry until blur, never committing while typing on toward eight digits', async () => {
+    const spy = vi.fn();
+    const user = userEvent.setup();
+    render(<Harness onChangeSpy={spy} />);
+
+    await user.type(input(), '050226');
+    expect(spy).not.toHaveBeenCalled();
+    expect(input()).toHaveAttribute('aria-invalid', 'false');
+
+    await user.tab();
+    expect(spy).toHaveBeenCalledWith('2026-02-05');
+    expect(input()).toHaveValue('05/02/2026');
+  });
+
+  it('holds a six-digit DDMMYY entry until Enter, then reports 20xx and shows the separated form', async () => {
+    const spy = vi.fn();
+    const user = userEvent.setup();
+    render(<Harness onChangeSpy={spy} />);
+
+    await user.type(input(), '050226');
+    expect(spy).not.toHaveBeenCalled();
+
+    await user.keyboard('{Enter}');
+    expect(spy).toHaveBeenCalledWith('2026-02-05');
+    expect(input()).toHaveValue('05/02/2026');
+  });
+
+  it('never commits the eight-digit-year date, even the six-digit 050220 (05/02/2020) it passes through on the way', async () => {
+    const spy = vi.fn();
+    const user = userEvent.setup();
+    render(<Harness onChangeSpy={spy} />);
+
+    await user.type(input(), '05022026');
+
+    expect(spy.mock.calls).toEqual([['2026-02-05']]);
+  });
+
+  it('does not flag a digit-only two-digit year that is out of range or not yet a date while typing', async () => {
+    const user = userEvent.setup();
+    render(<Harness min="2026-01-01" />);
+
+    // Six digits: 05/02/20, a real but out-of-range date, also the start of 05022026.
+    await user.type(input(), '050220');
+    expect(input()).toHaveAttribute('aria-invalid', 'false');
+    expect(screen.queryByTestId('dp-error')).not.toBeInTheDocument();
+  });
+
+  it('does not flag a digit-only entry that is not a real date at six digits, since it may still become one at eight', async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    // Six digits: 30/02/20 is not a real date (Feb has no 30th), but 30022026 could still be typed next.
+    await user.type(input(), '300220');
+    expect(input()).toHaveAttribute('aria-invalid', 'false');
+    expect(screen.queryByTestId('dp-error')).not.toBeInTheDocument();
+  });
+
+  it('does not flag a seven-digit entry as invalid while it is still being typed', async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    await user.type(input(), '0502202');
+    expect(input()).toHaveAttribute('aria-invalid', 'false');
+    expect(screen.queryByTestId('dp-error')).not.toBeInTheDocument();
+  });
+
+  it('rejects a seven-digit entry left as typed on blur: not a full DDMMYYYY, not a full DDMMYY', async () => {
+    const spy = vi.fn();
+    const user = userEvent.setup();
+    render(<Harness onChangeSpy={spy} />);
+
+    await user.type(input(), '0502202');
+    await user.tab();
+
+    expect(input()).toHaveValue('0502202');
+    expect(input()).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByTestId('dp-error')).toHaveTextContent('Enter a date as DD/MM/YYYY');
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('rejects 31022026 (31 February) as not a calendar date', () => {
+    const spy = vi.fn();
+    render(<Harness onChangeSpy={spy} />);
+
+    fireEvent.change(input(), { target: { value: '31022026' } });
+
+    expect(input()).toHaveAttribute('aria-invalid', 'true');
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('accepts the leap-year digit-only entry 29022028', () => {
+    const spy = vi.fn();
+    render(<Harness onChangeSpy={spy} />);
+
+    fireEvent.change(input(), { target: { value: '29022028' } });
+
+    expect(spy).toHaveBeenCalledWith('2028-02-29');
+  });
+
+  it('applies min/max bounds to a digit-only entry, with their own messages', () => {
+    const spy = vi.fn();
+    render(<Harness onChangeSpy={spy} min="2026-07-01" max="2026-07-31" />);
+
+    fireEvent.change(input(), { target: { value: '30062026' } });
+    expect(screen.getByTestId('dp-error')).toHaveTextContent('Date is before 01/07/2026');
+    fireEvent.change(input(), { target: { value: '01082026' } });
+    expect(screen.getByTestId('dp-error')).toHaveTextContent('Date is after 31/07/2026');
+
+    fireEvent.change(input(), { target: { value: '01072026' } });
+    expect(spy).toHaveBeenCalledWith('2026-07-01');
+  });
+});
+
 describe('DatePicker: controlled reconciliation', () => {
   it('follows a value changed from outside while the field is not focused', () => {
     const { rerender } = render(<DatePicker value="2026-07-06" onChange={vi.fn()} testId="dp" />);

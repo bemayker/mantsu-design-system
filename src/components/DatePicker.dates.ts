@@ -46,6 +46,12 @@ const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 const DISPLAY_DATE = /^(\d{1,2})[./-](\d{1,2})[./-](\d+)$/;
 /** What a user can have typed on the way to a full date. */
 const DISPLAY_PREFIX = /^\d{0,2}(?:[./-]\d{0,2}(?:[./-]\d{0,3})?)?$/;
+/**
+ * Digits with no separator: `DDMMYY` or `DDMMYYYY` (CORE-FB-23). The iPad
+ * numeric keypad `inputMode="numeric"` opens has no `/`, `-`, `.` or `:`, so
+ * operators on shop-floor tablets have no separator key to press.
+ */
+const DIGITS_ONLY = /^\d+$/;
 
 const pad = (value: number, width: number) => String(value).padStart(width, '0');
 
@@ -90,19 +96,58 @@ export function formatIsoToDisplay(iso: string | null | undefined): string {
   return `${pad(parts.day, 2)}/${pad(parts.month, 2)}/${pad(parts.year, 4)}`;
 }
 
+type Bounds = { min?: string; max?: string };
+
+/**
+ * Builds the result for a day/month/year triad already read from the text,
+ * shared by the separated and digit-only forms below. `yearDigits` also
+ * drives commit timing in `DatePicker`: `2` defers to blur/Enter (a two-digit
+ * year, or `DDMMYY`, might still be the start of a longer entry), `4` commits
+ * on the keystroke that completes it (`DDMM` plus a four-digit year, or
+ * `DDMMYYYY`).
+ */
+function resolveParts(day: number, month: number, yearText: string, yearDigits: 2 | 4, bounds: Bounds): DateParseResult {
+  const parts: DateParts = { day, month, year: yearDigits === 2 ? 2000 + Number(yearText) : Number(yearText) };
+  if (!isValidParts(parts)) return { status: 'invalid', yearDigits };
+
+  // ISO dates with four-digit years order lexicographically, so a string
+  // comparison is a date comparison here.
+  const iso = toIsoDate(parts);
+  if (isValidIsoDate(bounds.min) && iso < bounds.min) return { status: 'beforeMin', iso, yearDigits };
+  if (isValidIsoDate(bounds.max) && iso > bounds.max) return { status: 'afterMax', iso, yearDigits };
+  return { status: 'valid', iso, yearDigits };
+}
+
+/**
+ * `DDMMYY` (6 digits) or `DDMMYYYY` (8 digits), with no separator at all
+ * (CORE-FB-23: the iPad numeric keypad has none to offer). Any other
+ * digit-only length is still a possible prefix of one of those two (so
+ * `incomplete`, the way a partial separated date is) except nine digits or
+ * more, which cannot become either by typing further (`invalid` outright, the
+ * way an overlong separated year is). There is no guessing at a bare 4-digit
+ * `DDMM`: it is `incomplete` until it reaches 6 or 8 digits.
+ */
+function parseDigitsOnlyDate(digits: string, bounds: Bounds): DateParseResult {
+  if (digits.length === 6 || digits.length === 8) {
+    const yearDigits = digits.length === 6 ? 2 : 4;
+    return resolveParts(Number(digits.slice(0, 2)), Number(digits.slice(2, 4)), digits.slice(4), yearDigits, bounds);
+  }
+  return digits.length < 9 ? { status: 'incomplete' } : { status: 'invalid' };
+}
+
 /**
  * Reads what a user typed. Day first, always (product decision, CORE-FB-23),
- * whatever the language. Separators `/`, `-` and `.` are all accepted. A
- * two-digit year means 20xx (2000-2099, no pivot); a one- or three-digit year
- * is still being typed; five or more digits is invalid. `min`/`max` are
- * inclusive ISO dates.
+ * whatever the language. Separators `/`, `-` and `.` are all accepted, and so
+ * is no separator at all (`DDMMYY` or `DDMMYYYY`, for a numeric keypad with no
+ * separator key). A two-digit year means 20xx (2000-2099, no pivot); a one-
+ * or three-digit separated year is still being typed; five or more separated
+ * digits is invalid. `min`/`max` are inclusive ISO dates.
  */
-export function parseDisplayDate(
-  text: string,
-  bounds: { min?: string; max?: string } = {},
-): DateParseResult {
+export function parseDisplayDate(text: string, bounds: Bounds = {}): DateParseResult {
   const trimmed = text.trim();
   if (trimmed === '') return { status: 'empty' };
+
+  if (DIGITS_ONLY.test(trimmed)) return parseDigitsOnlyDate(trimmed, bounds);
 
   const match = DISPLAY_DATE.exec(trimmed);
   if (!match) {
@@ -114,19 +159,7 @@ export function parseDisplayDate(
   if (yearText.length > 4) return { status: 'invalid' };
 
   const yearDigits = yearText.length as 2 | 4;
-  const parts: DateParts = {
-    day: Number(match[1]),
-    month: Number(match[2]),
-    year: yearDigits === 2 ? 2000 + Number(yearText) : Number(yearText),
-  };
-  if (!isValidParts(parts)) return { status: 'invalid', yearDigits };
-
-  // ISO dates with four-digit years order lexicographically, so a string
-  // comparison is a date comparison here.
-  const iso = toIsoDate(parts);
-  if (isValidIsoDate(bounds.min) && iso < bounds.min) return { status: 'beforeMin', iso, yearDigits };
-  if (isValidIsoDate(bounds.max) && iso > bounds.max) return { status: 'afterMax', iso, yearDigits };
-  return { status: 'valid', iso, yearDigits };
+  return resolveParts(Number(match[1]), Number(match[2]), yearText, yearDigits, bounds);
 }
 
 /** True when `iso` lies within the inclusive bounds (a missing or invalid bound is open). */
