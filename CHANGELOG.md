@@ -6,6 +6,43 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 package follows [semantic versioning](https://semver.org/). See "Versioning" in the README
 for what counts as breaking.
 
+## 1.5.0
+
+### Added
+
+- `DatePicker`, a date field typed as `DD/MM/YYYY` in every language, with an
+  optional, minimal Monday-first calendar popover (CORE-FB-23). The native
+  `<input type="date">` it replaces renders in the operating system's locale
+  and cannot be told the app's language, so the same date read `06/07/2026` in
+  a table and `07/06/2026` in the drawer next to it. Values go in and out as
+  ISO `YYYY-MM-DD` strings (or `null`) and never pass through a `Date` built
+  from the value, so no browser time zone can shift a whole-day value.
+  Separators `/`, `-` and `.`; single-digit day and month; a four-digit year is
+  reported on the keystroke that completes it (so Playwright's `fill()` needs
+  no blur), a two-digit year means 20xx and is reported on blur or Enter only.
+  An invalid or out-of-range entry keeps its text, sets `aria-invalid` and
+  never calls `onChange`. `locale` drives month and weekday names only;
+  `labels` carries the component's English strings with per-key overrides, as
+  `Tree` does.
+- `TimeField`, a 24-hour `HH:MM` text field, because `<input type="time">`
+  shows AM/PM on a US-configured machine. Midnight is `00:00`, never `24:00`.
+- `DateTimePicker`, the two side by side, replacing
+  `<input type="datetime-local">`. Its value is the same `YYYY-MM-DDTHH:MM`
+  string the native input produced, so consumers' wire conversions stay
+  byte-identical; a half-filled entry reports nothing.
+
+### Test ids: a deliberate difference from `Dropdown`
+
+`DatePicker` and `TimeField` put `data-testid={testId}` on the **text input**,
+not on a wrapper, and derive the popover's ids from it (`-toggle`, `-calendar`,
+`-prev`, `-next`, `-month-label`, `-grid`, `-day-YYYY-MM-DD`, `-today`,
+`-clear`, `-error`). Every spec that drove the native date inputs types into
+the element it names, so they keep working with a new value shape and no id
+rewrites. `DateTimePicker` has two inputs, so its `testId` names the group and
+the inputs are `${testId}-date` and `${testId}-time`.
+
+Not breaking: three new components, no change to an existing export.
+
 ## 1.4.0
 
 ### Added
