@@ -198,7 +198,7 @@ See `DESIGN-SYSTEM.md` for the full table.
 
 ## Components
 
-Form: Button, Input, Switch, Checkbox, Radio
+Form: Button, Input, DatePicker, TimeField, DateTimePicker, Switch, Checkbox, Radio
 Data display: Badge, Tag, Card, OptionCard, Table, EmptyState
 Navigation: Tabs, Breadcrumbs, Sidebar, TopNavBar, Tree, SuiteNav, SettingsScopePage
 Feedback: Modal, SideDrawer, Toast, Tooltip
@@ -209,6 +209,13 @@ Both take the suite manifest, this app's own items or rows, and a `renderLink` t
 supplies the app's own router link; they own no state, fetch nothing and translate
 nothing. See their Storybook stories, and `docs/suite-manifest.md` for the payload they
 render from.
+
+`DatePicker`, `TimeField` and `DateTimePicker` are the only date and time inputs a Mantsu
+app should use: the native `type="date"`, `type="time"` and `type="datetime-local"`
+inputs render in the operating system's locale, not the app's language (CORE-FB-23).
+They take and return ISO strings, never `Date` objects, and put `testId` on the input
+the user types into (`DateTimePicker`, which has two, on the group: its inputs are
+`${testId}-date` and `${testId}-time`).
 
 `scopesFromManifest` builds the settings scope column from a manifest. Use it rather
 than assembling the list per app: it is where the rules live about which scopes exist
