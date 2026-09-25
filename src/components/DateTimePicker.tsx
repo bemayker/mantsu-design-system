@@ -3,7 +3,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 
 import { DatePicker } from './DatePicker';
 import type { DatePickerLabels } from './DatePicker';
-import { isValidIsoDate } from './DatePicker.dates';
+import { isValidIsoDate, isWithinBounds } from './DatePicker.dates';
 import { ERROR_CLASSES, HINT_CLASSES, LABEL_CLASSES, REQUIRED_MARK_CLASSES } from './fieldChrome';
 import type { FieldSize } from './fieldChrome';
 import { TimeField } from './TimeField';
@@ -135,8 +135,22 @@ export function DateTimePicker({
   // reactive. `validity.current` itself stays a ref: `report()` reads it
   // synchronously within the same event handler that updates it, before this
   // state's setters would have re-rendered.
-  const [dateValid, setDateValid] = useState(true);
+  //
+  // Initialised from the real bounds rather than a hardcoded `true`: a
+  // `splitValue`d initial date is always a syntactically valid ISO date, but
+  // it is not necessarily within `min`/`max`. Getting this wrong at mount
+  // would make the combined effect below fire twice on mount (once from this
+  // stale initial render, once from the child's own mount effect correcting
+  // it), instead of once with the real initial state.
+  const [dateValid, setDateValid] = useState(() => initialDate === null || isWithinBounds(initialDate, min, max));
   const [timeValid, setTimeValid] = useState(true);
+  // Whether each half's CURRENT text (not only its last committed value)
+  // resolves to empty. Unlike `datePart`/`timePart`, which only change on
+  // commit, this flips the instant a deferred entry (a pending two-digit
+  // year, `HMM`) stops being empty, so "exactly one half has text in it" is
+  // judged from what is on screen, the same as the validity signal is.
+  const [dateEmpty, setDateEmpty] = useState(initialDate === null);
+  const [timeEmpty, setTimeEmpty] = useState(initialTime === null);
   const [left, setLeft] = useState(false);
   const groupRef = useRef<HTMLDivElement>(null);
 
@@ -187,7 +201,7 @@ export function DateTimePicker({
     setLeft(true);
   };
 
-  const halfFilled = (datePart === null) !== (timePart === null);
+  const halfFilled = dateEmpty !== timeEmpty;
   const groupMessage = error ?? (left && halfFilled ? resolvedLabels.incomplete : undefined);
 
   const groupValid = dateValid && timeValid && !halfFilled;
@@ -227,6 +241,7 @@ export function DateTimePicker({
               validity.current.date = valid;
               setDateValid(valid);
             }}
+            onEmptyChange={setDateEmpty}
             min={min}
             max={max}
             required={required}
@@ -247,6 +262,7 @@ export function DateTimePicker({
               validity.current.time = valid;
               setTimeValid(valid);
             }}
+            onEmptyChange={setTimeEmpty}
             required={required}
             disabled={disabled}
             labels={labels}
