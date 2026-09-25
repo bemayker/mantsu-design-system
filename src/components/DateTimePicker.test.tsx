@@ -179,3 +179,120 @@ describe('DateTimePicker', () => {
     expect(screen.getByTestId('dtp-date-toggle')).toBeDisabled();
   });
 });
+
+describe('DateTimePicker: onValidityChange', () => {
+  it('fires once on mount with true when both halves start empty', () => {
+    const spy = vi.fn();
+    render(<Harness onValidityChange={spy} />);
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith(true);
+  });
+
+  it('fires once on mount with true when both halves start with a valid value', () => {
+    const spy = vi.fn();
+    render(<Harness initial="2026-07-09T08:00" onValidityChange={spy} />);
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith(true);
+  });
+
+  it('flips false while exactly one half is filled, and true again once the other is corrected', async () => {
+    const spy = vi.fn();
+    const user = userEvent.setup();
+    render(<Harness onValidityChange={spy} />);
+    spy.mockClear();
+
+    await user.type(dateInput(), '09/07/2026');
+    expect(spy).toHaveBeenLastCalledWith(false);
+
+    await user.type(timeInput(), '08:00');
+    expect(spy).toHaveBeenLastCalledWith(true);
+  });
+
+  it('flags an invalid date half as soon as it is typed, with no blur', () => {
+    const spy = vi.fn();
+    render(<Harness initial="2026-07-09T08:00" onValidityChange={spy} />);
+    spy.mockClear();
+
+    fireEvent.change(dateInput(), { target: { value: '31/02/2026' } });
+
+    expect(spy).toHaveBeenLastCalledWith(false);
+  });
+
+  it('flags an invalid time half as soon as it is typed, with no blur', () => {
+    const spy = vi.fn();
+    render(<Harness initial="2026-07-09T08:00" onValidityChange={spy} />);
+    spy.mockClear();
+
+    fireEvent.change(timeInput(), { target: { value: '25:00' } });
+
+    expect(spy).toHaveBeenLastCalledWith(false);
+  });
+
+  it('flags a date half that is out of range', () => {
+    const spy = vi.fn();
+    render(<Harness initial="2026-07-09T08:00" min="2026-07-05" onValidityChange={spy} />);
+    spy.mockClear();
+
+    fireEvent.change(dateInput(), { target: { value: '01/07/2026' } });
+
+    expect(spy).toHaveBeenLastCalledWith(false);
+  });
+
+  it('treats a pending two-digit year as valid, because it resolves at commit', () => {
+    const spy = vi.fn();
+    render(<Harness initial="2026-07-09T08:00" onValidityChange={spy} />);
+    spy.mockClear();
+
+    fireEvent.change(dateInput(), { target: { value: '05/02/26' } });
+
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('corrects an invalid entry back to valid without a blur', () => {
+    const spy = vi.fn();
+    render(<Harness initial="2026-07-09T08:00" onValidityChange={spy} />);
+    spy.mockClear();
+
+    fireEvent.change(timeInput(), { target: { value: '25:00' } });
+    expect(spy).toHaveBeenLastCalledWith(false);
+
+    fireEvent.change(timeInput(), { target: { value: '09:15' } });
+    expect(spy).toHaveBeenLastCalledWith(true);
+  });
+
+  it('does not fire again for a change that leaves the combined validity unchanged', () => {
+    const spy = vi.fn();
+    render(<Harness initial="2026-07-09T08:00" onValidityChange={spy} />);
+    spy.mockClear();
+
+    fireEvent.change(timeInput(), { target: { value: '25:00' } });
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenLastCalledWith(false);
+
+    // Still invalid, still a different invalid time: the combined signal
+    // does not flip back and forth on every keystroke, only on the crossing.
+    fireEvent.change(timeInput(), { target: { value: '26:00' } });
+    expect(spy).toHaveBeenCalledTimes(1);
+
+    fireEvent.change(dateInput(), { target: { value: '31/02/2026' } });
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('DateTimePicker: placeholders', () => {
+  it('defaults each half to its own default placeholder', () => {
+    render(<Harness />);
+
+    expect(dateInput()).toHaveAttribute('placeholder', 'DD/MM/YYYY');
+    expect(timeInput()).toHaveAttribute('placeholder', 'HH:MM');
+  });
+
+  it('passes datePlaceholder and timePlaceholder through to each half independently', () => {
+    render(<Harness datePlaceholder="Pick a date" timePlaceholder="Pick a time" />);
+
+    expect(dateInput()).toHaveAttribute('placeholder', 'Pick a date');
+    expect(timeInput()).toHaveAttribute('placeholder', 'Pick a time');
+  });
+});
