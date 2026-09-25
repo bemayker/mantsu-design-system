@@ -47,6 +47,36 @@ export const WithError: StoryObj = {
   render: () => <Controlled initial="2026-07-09T06:00" error="End is before start" />,
 };
 
+function ValidatedControlled({ initial = null, ...rest }: ControlledProps) {
+  const [value, setValue] = React.useState<string | null>(initial);
+  const [valid, setValid] = React.useState(true);
+  return (
+    <div className="flex w-96 flex-col gap-2">
+      <DateTimePicker
+        label="Start"
+        {...rest}
+        value={value}
+        onChange={setValue}
+        onValidityChange={setValid}
+        hint="Save is disabled while the fields do not hold a reportable value."
+      />
+      <button type="button" disabled={!valid} className="w-fit rounded-md bg-primary-blue px-3 py-1.5 text-white disabled:opacity-40">
+        Save
+      </button>
+    </div>
+  );
+}
+
+export const WithValidityGatedSave: StoryObj = {
+  name: 'Gating Save on onValidityChange',
+  render: () => <ValidatedControlled testId="gated-start" />,
+};
+
+export const CustomPlaceholders: StoryObj = {
+  name: 'Custom placeholders',
+  render: () => <Controlled datePlaceholder="Choose a date" timePlaceholder="Choose a time" />,
+};
+
 export const Dutch: StoryObj = {
   name: 'Dutch',
   render: () => (

@@ -3,7 +3,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 
 import { DatePicker } from './DatePicker';
 import type { DatePickerLabels } from './DatePicker';
-import { isValidIsoDate } from './DatePicker.dates';
+import { isValidIsoDate, isWithinBounds } from './DatePicker.dates';
 import { ERROR_CLASSES, HINT_CLASSES, LABEL_CLASSES, REQUIRED_MARK_CLASSES } from './fieldChrome';
 import type { FieldSize } from './fieldChrome';
 import { TimeField } from './TimeField';
@@ -57,6 +57,23 @@ export interface DateTimePickerProps {
   id?: string;
   /** `'md'` 36px (default), `'lg'` 40px. */
   size?: FieldSize;
+  /**
+   * Told whenever what the two fields currently show flips between
+   * "reportable" and not: `false` whenever either half's current text is
+   * invalid (including out of `min`/`max`), whenever either half holds text
+   * that is typed but not yet committed and would not commit to a valid
+   * value (so Enter without a blur is covered too), or whenever exactly one
+   * half is filled and the other is empty. `true` when both halves are
+   * empty, or both hold text that resolves to a valid value (a pending
+   * two-digit year that will commit on blur still counts as valid, because
+   * it resolves). Fires once on mount with the initial state, then only on
+   * change.
+   */
+  onValidityChange?: (valid: boolean) => void;
+  /** Placeholder for the date half. Default `'DD/MM/YYYY'` (from `DatePicker`). */
+  datePlaceholder?: string;
+  /** Placeholder for the time half. Default `'HH:MM'` (from `TimeField`). */
+  timePlaceholder?: string;
 }
 
 const DATE_TIME_VALUE = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})$/;
@@ -100,6 +117,9 @@ export function DateTimePicker({
   testId = 'date-time-picker',
   id,
   size = 'md',
+  onValidityChange,
+  datePlaceholder,
+  timePlaceholder,
 }: DateTimePickerProps) {
   const resolvedLabels = { ...DEFAULT_LABELS, ...labels };
   const generatedId = useId();
@@ -111,6 +131,26 @@ export function DateTimePicker({
   const [datePart, setDatePart] = useState<string | null>(initialDate);
   const [timePart, setTimePart] = useState<string | null>(initialTime);
   const validity = useRef({ date: true, time: true });
+  // Mirrors `validity.current` into state so the combined signal below is
+  // reactive. `validity.current` itself stays a ref: `report()` reads it
+  // synchronously within the same event handler that updates it, before this
+  // state's setters would have re-rendered.
+  //
+  // Initialised from the real bounds rather than a hardcoded `true`: a
+  // `splitValue`d initial date is always a syntactically valid ISO date, but
+  // it is not necessarily within `min`/`max`. Getting this wrong at mount
+  // would make the combined effect below fire twice on mount (once from this
+  // stale initial render, once from the child's own mount effect correcting
+  // it), instead of once with the real initial state.
+  const [dateValid, setDateValid] = useState(() => initialDate === null || isWithinBounds(initialDate, min, max));
+  const [timeValid, setTimeValid] = useState(true);
+  // Whether each half's CURRENT text (not only its last committed value)
+  // resolves to empty. Unlike `datePart`/`timePart`, which only change on
+  // commit, this flips the instant a deferred entry (a pending two-digit
+  // year, `HMM`) stops being empty, so "exactly one half has text in it" is
+  // judged from what is on screen, the same as the validity signal is.
+  const [dateEmpty, setDateEmpty] = useState(initialDate === null);
+  const [timeEmpty, setTimeEmpty] = useState(initialTime === null);
   const [left, setLeft] = useState(false);
   const groupRef = useRef<HTMLDivElement>(null);
 
@@ -161,8 +201,18 @@ export function DateTimePicker({
     setLeft(true);
   };
 
-  const halfFilled = (datePart === null) !== (timePart === null);
+  const halfFilled = dateEmpty !== timeEmpty;
   const groupMessage = error ?? (left && halfFilled ? resolvedLabels.incomplete : undefined);
+
+  const groupValid = dateValid && timeValid && !halfFilled;
+  const onValidityChangeRef = useRef(onValidityChange);
+  onValidityChangeRef.current = onValidityChange;
+  const lastReportedValid = useRef<boolean | null>(null);
+  useEffect(() => {
+    if (lastReportedValid.current === groupValid) return;
+    lastReportedValid.current = groupValid;
+    onValidityChangeRef.current?.(groupValid);
+  }, [groupValid]);
 
   return (
     <div
@@ -189,7 +239,9 @@ export function DateTimePicker({
             onChange={handleDateChange}
             onValidityChange={(valid) => {
               validity.current.date = valid;
+              setDateValid(valid);
             }}
+            onEmptyChange={setDateEmpty}
             min={min}
             max={max}
             required={required}
@@ -199,6 +251,7 @@ export function DateTimePicker({
             ariaLabel={resolvedLabels.date}
             testId={`${testId}-date`}
             size={size}
+            placeholder={datePlaceholder}
           />
         </div>
         <div className="w-24 shrink-0">
@@ -207,13 +260,16 @@ export function DateTimePicker({
             onChange={handleTimeChange}
             onValidityChange={(valid) => {
               validity.current.time = valid;
+              setTimeValid(valid);
             }}
+            onEmptyChange={setTimeEmpty}
             required={required}
             disabled={disabled}
             labels={labels}
             ariaLabel={resolvedLabels.time}
             testId={`${testId}-time`}
             size={size}
+            placeholder={timePlaceholder}
           />
         </div>
       </div>

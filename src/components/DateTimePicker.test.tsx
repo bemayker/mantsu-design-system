@@ -179,3 +179,212 @@ describe('DateTimePicker', () => {
     expect(screen.getByTestId('dtp-date-toggle')).toBeDisabled();
   });
 });
+
+describe('DateTimePicker: onValidityChange', () => {
+  it('fires once on mount with true when both halves start empty', () => {
+    const spy = vi.fn();
+    render(<Harness onValidityChange={spy} />);
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith(true);
+  });
+
+  it('fires once on mount with true when both halves start with a valid value', () => {
+    const spy = vi.fn();
+    render(<Harness initial="2026-07-09T08:00" onValidityChange={spy} />);
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith(true);
+  });
+
+  it('flips false while exactly one half is filled, and true again once the other is corrected', async () => {
+    const spy = vi.fn();
+    const user = userEvent.setup();
+    render(<Harness onValidityChange={spy} />);
+    spy.mockClear();
+
+    await user.type(dateInput(), '09/07/2026');
+    expect(spy).toHaveBeenLastCalledWith(false);
+
+    await user.type(timeInput(), '08:00');
+    expect(spy).toHaveBeenLastCalledWith(true);
+  });
+
+  it('flags an invalid date half as soon as it is typed, with no blur', () => {
+    const spy = vi.fn();
+    render(<Harness initial="2026-07-09T08:00" onValidityChange={spy} />);
+    spy.mockClear();
+
+    fireEvent.change(dateInput(), { target: { value: '31/02/2026' } });
+
+    expect(spy).toHaveBeenLastCalledWith(false);
+  });
+
+  it('flags an invalid time half as soon as it is typed, with no blur', () => {
+    const spy = vi.fn();
+    render(<Harness initial="2026-07-09T08:00" onValidityChange={spy} />);
+    spy.mockClear();
+
+    fireEvent.change(timeInput(), { target: { value: '25:00' } });
+
+    expect(spy).toHaveBeenLastCalledWith(false);
+  });
+
+  it('flags a date half that is out of range', () => {
+    const spy = vi.fn();
+    render(<Harness initial="2026-07-09T08:00" min="2026-07-05" onValidityChange={spy} />);
+    spy.mockClear();
+
+    fireEvent.change(dateInput(), { target: { value: '01/07/2026' } });
+
+    expect(spy).toHaveBeenLastCalledWith(false);
+  });
+
+  it('treats a pending two-digit year as valid, because it resolves at commit', () => {
+    const spy = vi.fn();
+    render(<Harness initial="2026-07-09T08:00" onValidityChange={spy} />);
+    spy.mockClear();
+
+    fireEvent.change(dateInput(), { target: { value: '05/02/26' } });
+
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('corrects an invalid entry back to valid without a blur', () => {
+    const spy = vi.fn();
+    render(<Harness initial="2026-07-09T08:00" onValidityChange={spy} />);
+    spy.mockClear();
+
+    fireEvent.change(timeInput(), { target: { value: '25:00' } });
+    expect(spy).toHaveBeenLastCalledWith(false);
+
+    fireEvent.change(timeInput(), { target: { value: '09:15' } });
+    expect(spy).toHaveBeenLastCalledWith(true);
+  });
+
+  it('does not fire again for a change that leaves the combined validity unchanged', () => {
+    const spy = vi.fn();
+    render(<Harness initial="2026-07-09T08:00" onValidityChange={spy} />);
+    spy.mockClear();
+
+    fireEvent.change(timeInput(), { target: { value: '25:00' } });
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenLastCalledWith(false);
+
+    // Still invalid, still a different invalid time: the combined signal
+    // does not flip back and forth on every keystroke, only on the crossing.
+    fireEvent.change(timeInput(), { target: { value: '26:00' } });
+    expect(spy).toHaveBeenCalledTimes(1);
+
+    fireEvent.change(dateInput(), { target: { value: '31/02/2026' } });
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it('flags exactly-one-filled from a PENDING, uncommitted entry, not only a committed one', () => {
+    const spy = vi.fn();
+    render(<Harness onValidityChange={spy} />);
+    spy.mockClear();
+
+    // A two-digit year defers its commit to blur/Enter, so `onChange` has not
+    // fired and the date half has not "committed" anything yet. The date
+    // field nonetheless shows text with nothing in the time field, so this
+    // must count as exactly-one-filled, the same as a committed date would.
+    fireEvent.change(dateInput(), { target: { value: '05/02/26' } });
+
+    expect(spy).toHaveBeenLastCalledWith(false);
+  });
+
+  it('flips back to valid once a cleared half holds a pending resolvable entry again', () => {
+    const spy = vi.fn();
+    render(<Harness initial="2026-07-09T08:00" onValidityChange={spy} />);
+    spy.mockClear();
+
+    fireEvent.change(dateInput(), { target: { value: '' } });
+    expect(spy).toHaveBeenLastCalledWith(false);
+
+    // Not empty any more, and it resolves: both halves are "filled" again,
+    // even though this one has not committed. Judged from current text, not
+    // only the last committed value, the same as the invalid case is.
+    fireEvent.change(dateInput(), { target: { value: '05/02/26' } });
+    expect(spy).toHaveBeenLastCalledWith(true);
+  });
+
+  it('fires exactly once on mount with the real initial state when the initial value is out of range', () => {
+    const spy = vi.fn();
+    render(<Harness initial="2026-07-01T08:00" min="2026-07-05" onValidityChange={spy} />);
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith(false);
+  });
+
+  it('reports the joined value on Enter, without waiting for a blur', () => {
+    const spy = vi.fn();
+    const onChangeSpy = vi.fn();
+    render(<Harness initial="2026-07-09T08:00" onValidityChange={spy} onChangeSpy={onChangeSpy} />);
+    spy.mockClear();
+
+    // A pending two-digit year already counts as valid before it commits (the
+    // time half is untouched and still filled), so the combined signal does
+    // not flip here; what Enter changes is that `onChange` now fires.
+    fireEvent.change(dateInput(), { target: { value: '05/02/26' } });
+    expect(spy).not.toHaveBeenCalled();
+    expect(onChangeSpy).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(dateInput(), { key: 'Enter' });
+    expect(onChangeSpy).toHaveBeenLastCalledWith('2026-02-05T08:00');
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('reports invalid on Enter without a blur, and does not report a value', () => {
+    const spy = vi.fn();
+    const onChangeSpy = vi.fn();
+    render(<Harness initial="2026-07-09T08:00" onValidityChange={spy} onChangeSpy={onChangeSpy} />);
+    spy.mockClear();
+    onChangeSpy.mockClear();
+
+    fireEvent.change(dateInput(), { target: { value: '31/02' } });
+    fireEvent.keyDown(dateInput(), { key: 'Enter' });
+
+    expect(spy).toHaveBeenLastCalledWith(false);
+    expect(onChangeSpy).not.toHaveBeenCalled();
+  });
+
+  it('flags a date half that is out of the max bound', () => {
+    const spy = vi.fn();
+    render(<Harness initial="2026-07-09T08:00" max="2026-07-10" onValidityChange={spy} />);
+    spy.mockClear();
+
+    fireEvent.change(dateInput(), { target: { value: '15/07/2026' } });
+
+    expect(spy).toHaveBeenLastCalledWith(false);
+  });
+
+  it('treats a deferred three-digit time as valid once it is complete, before any blur', () => {
+    const spy = vi.fn();
+    render(<Harness initial="2026-07-09T08:00" onValidityChange={spy} />);
+    spy.mockClear();
+
+    // "805" is a valid deferred reading of 08:05, but it is also the start of
+    // a four-digit "8050"-shaped entry, so `onChange` waits for commit; the
+    // combined validity, judged from the current text, does not.
+    fireEvent.change(timeInput(), { target: { value: '805' } });
+
+    expect(spy).not.toHaveBeenCalled();
+  });
+});
+
+describe('DateTimePicker: placeholders', () => {
+  it('defaults each half to its own default placeholder', () => {
+    render(<Harness />);
+
+    expect(dateInput()).toHaveAttribute('placeholder', 'DD/MM/YYYY');
+    expect(timeInput()).toHaveAttribute('placeholder', 'HH:MM');
+  });
+
+  it('passes datePlaceholder and timePlaceholder through to each half independently', () => {
+    render(<Harness datePlaceholder="Pick a date" timePlaceholder="Pick a time" />);
+
+    expect(dateInput()).toHaveAttribute('placeholder', 'Pick a date');
+    expect(timeInput()).toHaveAttribute('placeholder', 'Pick a time');
+  });
+});

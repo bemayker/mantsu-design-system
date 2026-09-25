@@ -6,6 +6,32 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 package follows [semantic versioning](https://semver.org/). See "Versioning" in the README
 for what counts as breaking.
 
+## 1.6.0
+
+### Added
+
+- `DateTimePicker` gains `onValidityChange?: (valid: boolean) => void`
+  (CORE-FB-23). `DatePicker` and `TimeField` already reported their own
+  resolvability, but `DateTimePicker` consumed both signals internally and
+  forwarded neither, so a form could not tell "an invalid entry on screen"
+  from "the value it last reported" without reading the DOM. `valid` is
+  judged from each half's CURRENT text, not only its last committed value
+  (`DatePicker` and `TimeField` both gain a matching internal `onEmptyChange`
+  for this, so a deferred entry such as a pending two-digit year counts the
+  instant it stops being empty, not only once it commits). It is `false`
+  whenever either half's current text is invalid (including out of
+  `min`/`max`), whenever either half holds text that is typed but not yet
+  committed and would not commit to a valid value (so `Enter` without a blur
+  is covered too), or whenever exactly one half holds text while the other is
+  empty; `true` when both halves are empty or both resolve to a valid value
+  (a pending two-digit year that will commit on blur still counts as valid,
+  because it resolves). It fires once on mount with the real initial state
+  (accounting for an initial value that is outside `min`/`max`), then only
+  when the combined signal actually changes.
+- `DateTimePicker` gains `datePlaceholder` and `timePlaceholder`, passed
+  through to the date and time halves respectively (defaults unchanged:
+  `DD/MM/YYYY` and `HH:MM`).
+
 ## 1.5.0
 
 ### Added

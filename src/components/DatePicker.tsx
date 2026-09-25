@@ -145,6 +145,13 @@ export interface DatePickerProps {
    * while its date half is unresolved; most consumers need it never.
    */
   onValidityChange?: (valid: boolean) => void;
+  /**
+   * Told whenever the current text flips between resolving to empty and not,
+   * ahead of any commit (so a deferred two-digit-year entry counts the
+   * instant it stops being empty). `DateTimePicker` uses it to tell "one half
+   * has text in it" from "one half committed a value".
+   */
+  onEmptyChange?: (empty: boolean) => void;
 }
 
 const DAY_CELL_COUNT_PER_WEEK = 7;
@@ -209,6 +216,7 @@ export function DatePicker({
   withCalendar = true,
   size = 'md',
   onValidityChange,
+  onEmptyChange,
 }: DatePickerProps) {
   const resolvedLabels: Required<DatePickerLabels> = { ...DEFAULT_LABELS, ...labels };
   const generatedId = useId();
@@ -252,6 +260,7 @@ export function DatePicker({
     evaluate,
     onChange,
     onValidityChange,
+    onEmptyChange,
   });
 
   const [open, setOpen] = useState(false);

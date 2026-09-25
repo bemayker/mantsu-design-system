@@ -25,6 +25,15 @@ interface UseTypedValueOptions {
   onChange: (value: string | null) => void;
   /** Told whenever the text flips between "resolves to a value or to empty" and not. */
   onValidityChange?: (valid: boolean) => void;
+  /**
+   * Told whenever the CURRENT text (typed, possibly not yet committed) flips
+   * between resolving to empty and not. Unlike `datePart`/`timePart` on
+   * `DateTimePicker`, which only change on commit, this reflects a deferred
+   * entry (a pending two-digit year, `HMM`) the instant it stops being empty,
+   * so a consumer combining two of these fields can tell "one field has text
+   * in it" from "one field committed a value" without re-parsing.
+   */
+  onEmptyChange?: (empty: boolean) => void;
 }
 
 /**
@@ -41,7 +50,14 @@ interface UseTypedValueOptions {
  *    is not focused. A parent re-render mid-typing would otherwise eat the
  *    user's keystrokes.
  */
-export function useTypedValue({ value, format, evaluate, onChange, onValidityChange }: UseTypedValueOptions) {
+export function useTypedValue({
+  value,
+  format,
+  evaluate,
+  onChange,
+  onValidityChange,
+  onEmptyChange,
+}: UseTypedValueOptions) {
   const [text, setText] = useState(() => format(value));
   const [error, setError] = useState<string | null>(null);
   const focused = useRef(false);
@@ -54,15 +70,29 @@ export function useTypedValue({ value, format, evaluate, onChange, onValidityCha
     // it would only re-run this on identity churn.
   }, [value]);
 
+  // What committing right now would do to the current text, independent of
+  // whether the user has actually committed (blurred or pressed Enter) yet.
+  const commitOutcome = evaluate(text, 'commit');
+  const resolvable = commitOutcome.kind === 'empty' || commitOutcome.kind === 'commit';
+  const currentlyEmpty = commitOutcome.kind === 'empty';
+
   const onValidityChangeRef = useRef(onValidityChange);
   onValidityChangeRef.current = onValidityChange;
-  const resolvable = ['empty', 'commit'].includes(evaluate(text, 'commit').kind);
   const lastReported = useRef<boolean | null>(null);
   useEffect(() => {
     if (lastReported.current === resolvable) return;
     lastReported.current = resolvable;
     onValidityChangeRef.current?.(resolvable);
   }, [resolvable]);
+
+  const onEmptyChangeRef = useRef(onEmptyChange);
+  onEmptyChangeRef.current = onEmptyChange;
+  const lastEmptyReported = useRef<boolean | null>(null);
+  useEffect(() => {
+    if (lastEmptyReported.current === currentlyEmpty) return;
+    lastEmptyReported.current = currentlyEmpty;
+    onEmptyChangeRef.current?.(currentlyEmpty);
+  }, [currentlyEmpty]);
 
   const apply = (nextText: string, phase: TypedPhase): boolean => {
     const outcome = evaluate(nextText, phase);

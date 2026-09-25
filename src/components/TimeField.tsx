@@ -44,6 +44,8 @@ export interface TimeFieldProps {
   size?: FieldSize;
   /** As on `DatePicker`: told when the text flips between resolvable and not. */
   onValidityChange?: (valid: boolean) => void;
+  /** As on `DatePicker`: told when the current text flips between resolving to empty and not, ahead of any commit. */
+  onEmptyChange?: (empty: boolean) => void;
 }
 
 const formatTime = (value: string | null): string => (isValidTimeValue(value) ? value : '');
@@ -76,6 +78,7 @@ export function TimeField({
   ariaLabel,
   size = 'md',
   onValidityChange,
+  onEmptyChange,
 }: TimeFieldProps) {
   const resolvedLabels: Required<TimeFieldLabels> = { ...DEFAULT_LABELS, ...labels };
   const generatedId = useId();
@@ -102,7 +105,14 @@ export function TimeField({
     }
   };
 
-  const typed = useTypedValue({ value: current, format: formatTime, evaluate, onChange, onValidityChange });
+  const typed = useTypedValue({
+    value: current,
+    format: formatTime,
+    evaluate,
+    onChange,
+    onValidityChange,
+    onEmptyChange,
+  });
   const shownError = error ?? typed.error ?? undefined;
   const invalid = shownError !== undefined;
 
