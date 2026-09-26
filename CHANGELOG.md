@@ -6,6 +6,27 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 package follows [semantic versioning](https://semver.org/). See "Versioning" in the README
 for what counts as breaking.
 
+## 2.4.0
+
+### Added
+
+- `Dropdown` `clearLabel`: the accessible name of the clear button, so an app
+  can translate it (default `Clear selection`).
+- `Tabs` `testIdPrefix` (a `data-testid` per tab) and `associatePanels`
+  (`id` and `aria-controls` per tab), with the exported helpers `tabButtonId`
+  and `tabPanelId`.
+- `SideDrawer` `testId` (panel, and `-close` on its close button) and
+  `closeLabel`; the panel is named by its title.
+- `Toast` / `useToast` `info` variant, for a notice that reports no outcome.
+
+### Changed
+
+- `Dropdown`: typing in the search points at the first matching option, so
+  Enter picks what the operator sees. Before, the highlight was cleared and
+  Enter did nothing until an arrow key was pressed.
+
+All four were found moving Lists onto the package (UI-20.5).
+
 ## 2.3.0
 
 ### Added

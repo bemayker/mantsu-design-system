@@ -10,9 +10,13 @@ export interface SideDrawerProps {
   children: React.ReactNode;
   footer?: React.ReactNode;
   width?: string;
+  /** `data-testid` of the panel; the close button is `{testId}-close` (UI-20.5). */
+  testId?: string;
+  /** Accessible name of the close button, already translated. Default `Close`. */
+  closeLabel?: string;
 }
 export const SideDrawer: React.FC<SideDrawerProps> = ({
-  open, onClose, title, children, footer, width = '420px',
+  open, onClose, title, children, footer, width = '420px', testId, closeLabel = 'Close',
 }) => {
   // Shared stack, same reason as `Modal`: an overlay opened inside the drawer
   // closes itself on Escape without taking the drawer with it.
@@ -27,6 +31,8 @@ export const SideDrawer: React.FC<SideDrawerProps> = ({
       <aside
         role="dialog"
         aria-modal="true"
+        aria-label={title}
+        data-testid={testId}
         style={{ width }}
         className={cn(
           'absolute right-0 top-0 h-full bg-white shadow-mantsu-lg flex flex-col transition-transform',
@@ -36,7 +42,8 @@ export const SideDrawer: React.FC<SideDrawerProps> = ({
         {title && (
           <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
             <h2 className="text-h3 text-midnight">{title}</h2>
-            <button onClick={onClose} aria-label="Close" className="text-slate-400 hover:text-midnight text-xl leading-none">×</button>
+            <button type="button" onClick={onClose} aria-label={closeLabel}
+              data-testid={testId ? `${testId}-close` : undefined} className="text-slate-400 hover:text-midnight text-xl leading-none">×</button>
           </div>
         )}
         <div className="flex-1 overflow-y-auto px-6 py-5 text-body text-midnight">{children}</div>

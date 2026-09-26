@@ -104,6 +104,8 @@ export interface DropdownProps<T = string> {
   portal?: boolean;
   /** Shown in place of the options when a search matches none. */
   noResultsLabel?: string;
+  /** Accessible name of the clear button, already translated. Default `Clear selection`. */
+  clearLabel?: string;
   /** Accessible name for the trigger when no visible `label` is rendered. */
   ariaLabel?: string;
   /** Associates the trigger with an external `<label htmlFor>`. */
@@ -158,6 +160,7 @@ export function Dropdown<T = string>({
   id,
   portal = false,
   noResultsLabel,
+  clearLabel = 'Clear selection',
 }: DropdownProps<T>) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const [searchTerm, setSearchTerm] = useState('');
@@ -459,7 +462,7 @@ export function Dropdown<T = string>({
             <button
               type="button"
               tabIndex={-1}
-              aria-label="Clear selection"
+              aria-label={clearLabel}
               data-testid={`${testId}-clear`}
               onClick={handleClear}
               className="pointer-events-auto text-slate-400 hover:text-slate-600"
@@ -493,9 +496,18 @@ export function Dropdown<T = string>({
                   ref={searchRef}
                   value={searchTerm}
                   onChange={(event) => {
-                    setSearchTerm(event.target.value);
-                    setActiveIndex(-1);
-                    onSearchChange?.(event.target.value);
+                    const term = event.target.value;
+                    setSearchTerm(term);
+                    // Typing narrows the list and points at its first match, so
+                    // Enter picks what the operator can see (UI-20.5); an empty
+                    // search points at nothing, as before.
+                    const needle = term.trim().toLowerCase();
+                    setActiveIndex(
+                      needle === ''
+                        ? -1
+                        : options.filter((o) => o.label.toLowerCase().includes(needle)).findIndex((o) => !o.disabled),
+                    );
+                    onSearchChange?.(term);
                   }}
                   onKeyDown={handleKeyDown}
                   placeholder={searchPlaceholder}
