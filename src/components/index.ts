@@ -8,6 +8,7 @@ export * from './Tag';
 export * from './Card';
 export * from './OptionCard';
 export * from './Table';
+export * from './Pagination';
 export * from './EmptyState';
 export * from './Tabs';
 export * from './Breadcrumbs';
