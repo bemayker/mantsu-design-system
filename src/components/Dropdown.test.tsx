@@ -379,3 +379,49 @@ describe('Dropdown', () => {
     });
   });
 });
+
+describe('Dropdown portal (UI-20.4)', () => {
+  const options = [
+    { value: 'a', label: 'Alpha' },
+    { value: 'b', label: 'Beta' },
+  ];
+
+  it('renders the menu on document.body and still commits a choice', () => {
+    const onChange = vi.fn();
+    const { container } = render(
+      <div style={{ overflow: 'hidden' }}>
+        <Dropdown options={options} value={null} onChange={onChange} portal testId="pd" ariaLabel="Pick" />
+      </div>,
+    );
+
+    fireEvent.click(screen.getByTestId('pd-trigger'));
+    const menu = screen.getByTestId('pd-menu');
+    expect(container.contains(menu)).toBe(false);
+    expect(document.body.contains(menu)).toBe(true);
+
+    fireEvent.mouseDown(screen.getByTestId('pd-option-b'));
+    fireEvent.click(screen.getByTestId('pd-option-b'));
+    expect(onChange).toHaveBeenCalledWith('b');
+  });
+
+  it('closes on a press outside both the trigger and the portalled menu', () => {
+    render(<Dropdown options={options} value={null} onChange={() => undefined} portal testId="pd" ariaLabel="Pick" />);
+
+    fireEvent.click(screen.getByTestId('pd-trigger'));
+    fireEvent.mouseDown(document.body);
+
+    expect(screen.queryByTestId('pd-menu')).toBeNull();
+  });
+
+  it('says so when a search matches nothing', () => {
+    render(
+      <Dropdown options={options} value={null} onChange={() => undefined} searchable
+        noResultsLabel="No results" testId="pd" ariaLabel="Pick" />,
+    );
+
+    fireEvent.click(screen.getByTestId('pd-trigger'));
+    fireEvent.change(screen.getByTestId('pd-search'), { target: { value: 'zzz' } });
+
+    expect(screen.getByTestId('pd-no-results')).toHaveTextContent('No results');
+  });
+});

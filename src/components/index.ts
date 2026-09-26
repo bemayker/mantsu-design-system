@@ -33,6 +33,7 @@ export * from './GaugeChart';
 export * from './ColorSwatchPicker';
 export * from './ColorSwatch';
 export * from './Dropdown';
+export * from './MultiSelectDropdown';
 export * from './DatePicker';
 export * from './TimeField';
 export * from './DateTimePicker';

@@ -1,5 +1,7 @@
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from 'react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import type React from 'react';
 
 import { cn } from './cn';
 import { ColorSwatch } from './ColorSwatch';
@@ -93,6 +95,15 @@ export interface DropdownProps<T = string> {
    * dropdown (`coding_standards.md` §3.6: unique per page).
    */
   testId?: string;
+  /**
+   * Render the menu in a portal on `document.body`, positioned under the
+   * trigger and flipped above it when there is no room below (UI-20.4). For a
+   * dropdown inside a scrolling container, a modal body for one, whose
+   * overflow would otherwise clip the menu. Default `false`.
+   */
+  portal?: boolean;
+  /** Shown in place of the options when a search matches none. */
+  noResultsLabel?: string;
   /** Accessible name for the trigger when no visible `label` is rendered. */
   ariaLabel?: string;
   /** Associates the trigger with an external `<label htmlFor>`. */
@@ -145,6 +156,8 @@ export function Dropdown<T = string>({
   testId = 'custom-dropdown',
   ariaLabel,
   id,
+  portal = false,
+  noResultsLabel,
 }: DropdownProps<T>) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const [searchTerm, setSearchTerm] = useState('');
@@ -153,6 +166,8 @@ export function Dropdown<T = string>({
   const [activeIndex, setActiveIndex] = useState(-1);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [menuPosition, setMenuPosition] = useState<MenuPosition | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
@@ -192,7 +207,9 @@ export function Dropdown<T = string>({
   useEffect(() => {
     if (!isOpen) return;
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (menuRef.current?.contains(target)) return;
+      if (containerRef.current && !containerRef.current.contains(target)) {
         setIsOpen(false);
       }
     };
@@ -236,6 +253,23 @@ export function Dropdown<T = string>({
     // rather than a line every consuming test has to stub around.
     active?.scrollIntoView?.({ block: 'nearest' });
   }, [isOpen, activeIndex]);
+
+  // A portalled menu is positioned against the trigger, and follows it while
+  // any ancestor scrolls or the window resizes.
+  useLayoutEffect(() => {
+    if (!portal || !isOpen) return;
+    const place = () => {
+      const trigger = triggerRef.current;
+      if (trigger) setMenuPosition(menuPositionFor(trigger.getBoundingClientRect()));
+    };
+    place();
+    window.addEventListener('scroll', place, true);
+    window.addEventListener('resize', place);
+    return () => {
+      window.removeEventListener('scroll', place, true);
+      window.removeEventListener('resize', place);
+    };
+  }, [portal, isOpen]);
 
   const openMenu = (index: number) => {
     setIsOpen(true);
@@ -435,8 +469,23 @@ export function Dropdown<T = string>({
           )}
           <ChevronDownIcon className="h-4 w-4 shrink-0 text-slate-400" />
         </span>
-        {isOpen && !disabled && (
-          <div className="absolute z-10 mt-1 w-full rounded-md border border-slate-200 bg-white shadow-mantsu-md">
+        {isOpen && !disabled && renderMenu(
+          <div
+            ref={menuRef}
+            data-testid={`${testId}-menu`}
+            style={portal && menuPosition ? {
+              position: 'fixed',
+              left: menuPosition.left,
+              width: menuPosition.width,
+              ...(menuPosition.placement === 'down'
+                ? { top: menuPosition.top }
+                : { bottom: window.innerHeight - menuPosition.top }),
+            } : undefined}
+            className={cn(
+              'rounded-md border border-slate-200 bg-white shadow-mantsu-md',
+              portal ? 'z-[60]' : 'absolute z-10 mt-1 w-full',
+            )}
+          >
             {searchable && (
               <div className="px-2 pb-1 pt-2">
                 <input
@@ -468,7 +517,14 @@ export function Dropdown<T = string>({
               aria-label={ariaLabel ?? label}
               data-testid={`${testId}-options`}
               className="max-h-64 overflow-y-auto py-1"
+              style={portal && menuPosition ? { maxHeight: menuPosition.maxHeight } : undefined}
             >
+              {visibleOptions.length === 0 && noResultsLabel && (
+                <li role="presentation" data-testid={`${testId}-no-results`}
+                  className="px-3 py-2 text-body-sm text-slate-400">
+                  {noResultsLabel}
+                </li>
+              )}
               {visibleOptions.map((option, index) => {
                 const isSelected = option.value === value;
                 const isActive = index === activeIndex;
@@ -510,9 +566,40 @@ export function Dropdown<T = string>({
                 );
               })}
             </ul>
-          </div>
+          </div>,
         )}
       </div>
     </div>
   );
+
+  function renderMenu(menu: React.ReactElement) {
+    return portal ? createPortal(menu, document.body) : menu;
+  }
+}
+
+interface MenuPosition {
+  top: number;
+  left: number;
+  width: number;
+  maxHeight: number;
+  placement: 'down' | 'up';
+}
+
+const MENU_GAP = 4;
+const MENU_MAX_HEIGHT = 256;
+const MENU_MIN_ROOM = 160;
+
+/** Under the trigger, or above it when the room below is short and above is larger. */
+function menuPositionFor(rect: DOMRect): MenuPosition {
+  const below = window.innerHeight - rect.bottom - MENU_GAP * 2;
+  const above = rect.top - MENU_GAP * 2;
+  const placement = below < MENU_MIN_ROOM && above > below ? 'up' : 'down';
+  const room = placement === 'down' ? below : above;
+  return {
+    top: placement === 'down' ? rect.bottom + MENU_GAP : rect.top - MENU_GAP,
+    left: rect.left,
+    width: rect.width,
+    maxHeight: Math.max(Math.min(room, MENU_MAX_HEIGHT), 96),
+    placement,
+  };
 }

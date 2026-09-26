@@ -3,6 +3,7 @@ import React from 'react';
 import { ColorSwatch } from '../components/ColorSwatch';
 import { Dropdown } from '../components/Dropdown';
 import { Modal } from '../components/Modal';
+import { MultiSelectDropdown } from '../components/MultiSelectDropdown';
 
 const meta: Meta = { title: 'Components/Dropdown', tags: ['autodocs'] };
 export default meta;
@@ -137,6 +138,32 @@ export const InsideAModal: StoryObj = {
           </div>
         </Modal>
       </>
+    );
+  },
+};
+
+export const MultiSelect: StoryObj = {
+  render: () => {
+    const [values, setValues] = React.useState<string[]>(['be']);
+    return (
+      <div className="max-w-sm">
+        <MultiSelectDropdown label="Plants" options={[{ value: 'be', label: 'Bruges' }, { value: 'nl', label: 'Breda' }, { value: 'fr', label: 'Lille' }]}
+          values={values} onChange={setValues} placeholder="Select plants" testId="story-multi" />
+      </div>
+    );
+  },
+};
+
+export const PortalledInsideAModal: StoryObj = {
+  render: () => {
+    const [value, setValue] = React.useState<string | null>(null);
+    return (
+      <Modal open onClose={() => undefined} title="Scrolling body" closeLabel="Close">
+        <div className="h-24 overflow-auto">
+          <Dropdown label="Reason" options={Array.from({ length: 12 }, (_, i) => ({ value: `r${i}`, label: `Reason ${i + 1}` }))}
+            value={value} onChange={setValue} portal searchable noResultsLabel="No results" testId="story-portal" />
+        </div>
+      </Modal>
     );
   },
 };
