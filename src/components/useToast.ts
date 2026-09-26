@@ -8,6 +8,7 @@ export interface UseToastResult {
   success: (message: string) => void;
   /** Convenience for `show({ variant: 'error', message })` (AC8). */
   error: (message: string) => void;
+  info: (message: string) => void;
   show: (input: { variant: ToastVariant; message: string }) => void;
 }
 
@@ -23,6 +24,7 @@ export function useToast(): UseToastResult {
     () => ({
       success: (message: string) => show('success', message),
       error: (message: string) => show('error', message),
+      info: (message: string) => show('info', message),
       show: ({ variant, message }: { variant: ToastVariant; message: string }) => show(variant, message),
     }),
     [show],

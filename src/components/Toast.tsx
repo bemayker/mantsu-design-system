@@ -30,7 +30,7 @@ import React from 'react';
  * matched on it. Folding a divergence in means diffing the rendered output,
  * not the interface.
  */
-import { CheckCircleIcon, XCircleIcon, XIcon } from './Toast.icons';
+import { CheckCircleIcon, XCircleIcon, XIcon, InfoCircleIcon } from './Toast.icons';
 
 import { cn } from './cn';
 import type { ToastVariant } from './Toast.types';
@@ -52,6 +52,7 @@ export interface ToastProps {
 const VARIANT_STYLES: Record<ToastVariant, { icon: React.FC<{ className?: string }>; classes: string }> = {
   success: { icon: CheckCircleIcon, classes: 'border-success bg-success-bg text-primary-neutral' },
   error: { icon: XCircleIcon, classes: 'border-error bg-error-bg text-primary-neutral' },
+  info: { icon: InfoCircleIcon, classes: 'border-primary-blue/20 bg-info-bg text-primary-neutral' },
 };
 
 /**

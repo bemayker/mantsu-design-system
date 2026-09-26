@@ -249,8 +249,8 @@ describe('Dropdown', () => {
     expect(search).toHaveFocus();
 
     fireEvent.change(search, { target: { value: 'e' } });
-    // Belgium, Germany and Netherlands all contain an "e"; arrow to the third.
-    fireEvent.keyDown(search, { key: 'ArrowDown' });
+    // Belgium, Germany and Netherlands all contain an "e". Typing points at the
+    // first match (UI-20.5), and one arrow skips the disabled Germany.
     fireEvent.keyDown(search, { key: 'ArrowDown' });
     fireEvent.keyDown(search, { key: 'Enter' });
 
