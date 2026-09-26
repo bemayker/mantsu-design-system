@@ -16,8 +16,25 @@ export const ModalExample: StoryObj = {
       <>
         <Button onClick={() => setOpen(true)}>Open modal</Button>
         <Modal open={open} onClose={() => setOpen(false)} title="Delete order"
-          footer={<><Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button><Button variant="default" onClick={() => setOpen(false)}>Delete</Button></>}>
-          This action cannot be undone.
+          subtitle="This action cannot be undone." closeLabel="Close" testId="story-modal"
+          actions={<><Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button><Button variant="default" onClick={() => setOpen(false)}>Delete</Button></>}>
+          <p className="text-body text-midnight">Order 7009346 and its three operations are removed.</p>
+        </Modal>
+      </>
+    );
+  },
+};
+export const ModalWidths: StoryObj = {
+  render: () => {
+    const [width, setWidth] = React.useState<'sm' | 'md' | 'lg' | 'xl' | '2xl' | null>(null);
+    return (
+      <>
+        {(['sm', 'md', 'lg', 'xl', '2xl'] as const).map((w) => (
+          <Button key={w} onClick={() => setWidth(w)}>{w}</Button>
+        ))}
+        <Modal open={width !== null} onClose={() => setWidth(null)} width={width ?? 'md'}
+          title={`Width ${width}`} closeLabel="Close">
+          <p className="text-body text-midnight">420, 500, 600, 880 or 1000px.</p>
         </Modal>
       </>
     );
