@@ -6,6 +6,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 package follows [semantic versioning](https://semver.org/). See "Versioning" in the README
 for what counts as breaking.
 
+## 2.2.0
+
+### Added
+
+- `FormField` (UI-20.4), promoted from the Order Cockpit: label, required
+  marker, control and inline error box, in three recorded sizes (`default`
+  40px, `compact` and `registration` 36px). `control` renders an `input`,
+  `textarea` or native `select`; a control the package does not own is passed
+  as `children`, with `showError={false}` when it renders its own error;
+  `inputProps` spreads native attributes (`min`, a native `onChange`) onto
+  the built-in input.
+- `SearchInput` (UI-20.4): the Make search field, 40px with a 24px glyph,
+  `bordered` (default) or `borderless`, a required accessible name.
+- `Button` variants `primary`, `primary-outline`, `success-outline` and
+  `ghost`, and size `xs`: the Lists palettes, folded in so that module's own
+  button can go.
+- `Switch` `description`: a muted second line under the label.
+
 ## 2.1.0
 
 ### Added
