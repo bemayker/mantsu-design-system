@@ -6,6 +6,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 package follows [semantic versioning](https://semver.org/). See "Versioning" in the README
 for what counts as breaking.
 
+## 1.7.0
+
+### Added
+
+- `Pagination` and `getPageRange` (UI-20.1). The Make pager: first / previous,
+  a one-line summary, next / last, centred and borderless. Chrome only: the
+  caller passes the translated summary and the four button names, so the
+  package still carries no i18n. `showFirstLast` (default `true`) drops the
+  outer pair; `testId` prefixes the parts (`-first`, `-prev`, `-summary`,
+  `-next`, `-last`). `getPageRange(page, pageSize, total)` returns the clamped
+  page, the page count and the 1-based `from` / `to` a summary needs.
+  Replaces four diverged copies in `mantsu-ui` (Cockpit, Downtimes, Lists,
+  Core).
+
 ## 1.6.0
 
 ### Added
