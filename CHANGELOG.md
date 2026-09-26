@@ -6,6 +6,37 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 package follows [semantic versioning](https://semver.org/). See "Versioning" in the README
 for what counts as breaking.
 
+## 2.0.0
+
+### Changed (breaking)
+
+- `Modal` is now the Make dialog chrome (UI-20.2), replacing the generic
+  `max-w-lg` panel with a bordered header and footer. Radius 16,
+  `bg-black/50` backdrop, title 18/23 bold, close button top-right, header
+  `pt 24 px 24 pb 20 gap 16`, action row `pt 32 px 24 pb 24 gap 12`
+  right-aligned. An app that rendered the 1.x `Modal` looks different after
+  upgrading, which is why this is a major.
+- A backdrop press closes only when it starts on the backdrop (`mousedown`),
+  so a text selection dragged out of the panel no longer closes the dialog.
+
+### Added
+
+- `subtitle`, `icon` (48px featured-icon slot), `width`
+  (`sm` 420 / `md` 500 / `lg` 600 / `xl` 880 / `2xl` 1000px), `actions`,
+  `closeLabel`, `layer` (`above` stacks over another dialog), `overflow`
+  (`visible` lets a dropdown float past the panel), `dismissible`
+  (`false` locks every dismissal path) and `testId` (parts get `-backdrop`,
+  `-close`, `-title`, `-subtitle`).
+- Focus moves into the panel on open unless a child already took it, Tab is
+  trapped inside the panel, and focus returns to the trigger on close.
+
+### Deprecated
+
+- `footer`: use `actions`. It still renders, in the same row.
+
+Replaces three diverged modal chromes in `mantsu-ui` (Cockpit, Downtimes,
+Lists).
+
 ## 1.7.0
 
 ### Added

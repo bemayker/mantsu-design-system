@@ -1,6 +1,6 @@
 {
   "name": "@bemayker/mantsu-design-system",
-  "version": "1.7.0",
+  "version": "2.0.0",
   "description": "Mantsu Design System \u2014 React components + tokens, source of truth for the Mantsu MES UI",
   "license": "UNLICENSED",
   "repository": {
