@@ -8,6 +8,8 @@ export interface SwitchProps {
   disabled?: boolean;
   onChange?: (checked: boolean) => void;
   label?: string;
+  /** Muted second line under `label` (UI-20.4). */
+  description?: string;
   /** `data-testid` on the `role="switch"` button. */
   testId?: string;
   /**
@@ -21,7 +23,7 @@ export interface SwitchProps {
 }
 
 export const Switch: React.FC<SwitchProps> = ({
-  checked, defaultChecked, disabled, onChange, label, testId, ariaLabel,
+  checked, defaultChecked, disabled, onChange, label, description, testId, ariaLabel,
 }) => {
   const [internal, setInternal] = React.useState(defaultChecked ?? false);
   const isOn = checked ?? internal;
@@ -55,7 +57,13 @@ export const Switch: React.FC<SwitchProps> = ({
           )}
         />
       </button>
-      {label && <span className="text-body text-midnight">{label}</span>}
+      {label && !description && <span className="text-body text-midnight">{label}</span>}
+      {label && description && (
+        <span className="min-w-0">
+          <span className="block text-body text-midnight">{label}</span>
+          <span className="block text-body-xs text-slate-400">{description}</span>
+        </span>
+      )}
     </label>
   );
 };

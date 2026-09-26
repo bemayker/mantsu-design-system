@@ -1,4 +1,7 @@
+import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
+import { FormField } from '../components/FormField';
+import { SearchInput } from '../components/SearchInput';
 import { Input } from '../components/Input';
 import { Switch } from '../components/Switch';
 import { Checkbox } from '../components/Checkbox';
@@ -44,4 +47,32 @@ export const Radios: StoryObj = {
       <Radio name="g" label="Disabled" disabled />
     </div>
   ),
+};
+
+export const FormFields: StoryObj = {
+  render: () => {
+    const [code, setCode] = React.useState('');
+    const [note, setNote] = React.useState('');
+    return (
+      <div className="flex max-w-sm flex-col gap-4">
+        <FormField fieldId="story-code" label="Code" required value={code} onChange={setCode}
+          error={code === '' ? 'A code is required' : null} />
+        <FormField fieldId="story-qty" label="Quantity" variant="registration" type="number"
+          inputMode="decimal" value="12" onChange={() => undefined} />
+        <FormField fieldId="story-note" label="Note" control="textarea" value={note} onChange={setNote} />
+      </div>
+    );
+  },
+};
+
+export const SearchFields: StoryObj = {
+  render: () => {
+    const [q, setQ] = React.useState('');
+    return (
+      <div className="flex max-w-sm flex-col gap-4">
+        <SearchInput value={q} onChange={setQ} placeholder="Search" ariaLabel="Search equipment" />
+        <SearchInput value={q} onChange={setQ} placeholder="Search" ariaLabel="Search orders" variant="borderless" />
+      </div>
+    );
+  },
 };

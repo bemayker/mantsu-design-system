@@ -59,3 +59,12 @@ describe('Switch', () => {
     expect(control).not.toHaveAttribute('data-testid');
   });
 });
+
+describe('Switch description', () => {
+  it('renders a muted second line under the label', () => {
+    render(<Switch label="Active" description="Shown to operators" />);
+
+    expect(screen.getByText('Active')).toBeInTheDocument();
+    expect(screen.getByText('Shown to operators')).toBeInTheDocument();
+  });
+});

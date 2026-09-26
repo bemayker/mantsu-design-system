@@ -1,5 +1,7 @@
 export * from './Button';
 export * from './Input';
+export * from './FormField';
+export * from './SearchInput';
 export * from './Switch';
 export * from './Checkbox';
 export * from './Radio';
