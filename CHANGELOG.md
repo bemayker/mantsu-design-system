@@ -6,6 +6,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 package follows [semantic versioning](https://semver.org/). See "Versioning" in the README
 for what counts as breaking.
 
+## 2.1.0
+
+### Added
+
+- `ListTable` (UI-20.3), promoted from the Order Cockpit: the Make list
+  table. White sticky header, three densities (`picker`, `compact`, `modal`),
+  a row click reachable by Enter and Space, the selected row tinted
+  `bg-frost` and marked `data-selected`, and `rowProps` whose `className` is
+  appended. Chrome only; it never sorts or filters, which stays `DataTable`'s
+  job. Exports `ListTableColumn`, `ListTableRowProps`, `ListTableDensity`
+  and `ListTableProps`.
+
 ## 2.0.0
 
 ### Changed (breaking)
