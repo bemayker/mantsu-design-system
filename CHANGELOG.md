@@ -6,6 +6,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 package follows [semantic versioning](https://semver.org/). See "Versioning" in the README
 for what counts as breaking.
 
+## 2.3.0
+
+### Added
+
+- `Dropdown` `portal` (UI-20.4): renders the menu on `document.body`,
+  positioned under the trigger and flipped above it when the room below is
+  short, following the trigger on scroll and resize. For a dropdown inside a
+  scrolling container whose overflow would clip the menu. Default `false`.
+- `Dropdown` `noResultsLabel`: shown when a search matches no option.
+- `MultiSelectDropdown` (UI-20.4), promoted from Core unchanged apart from
+  the package's own icons.
+
 ## 2.2.0
 
 ### Added
