@@ -6,6 +6,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 package follows [semantic versioning](https://semver.org/). See "Versioning" in the README
 for what counts as breaking.
 
+## 2.5.0
+
+### Added
+
+- `DataTableColumn` and `Column` (`Table`) `headerLabel`: the accessible name
+  of a column whose `header` is visually empty, such as an actions column.
+  Rendered `sr-only` in the `columnheader` and used in the sort and options
+  buttons' labels. Ignored when `header` has visible text, so the announced
+  name always matches the visible one (WCAG 2.5.3, label in name). Columns
+  without it render exactly as in 2.4.0 (DT-FND-11-FB-1.1).
+
 ## 2.4.0
 
 ### Added

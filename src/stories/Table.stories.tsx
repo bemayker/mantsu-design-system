@@ -2,6 +2,9 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { Table } from '../components/Table';
 import { EmptyState } from '../components/EmptyState';
 import { Badge } from '../components/Badge';
+import { Button } from '../components/Button';
+import { DataTable } from '../components/DataTable';
+import type { DataTableColumn } from '../components/DataTable.types';
 
 const meta: Meta = { title: 'Components/Table', tags: ['autodocs'] };
 export default meta;
@@ -100,4 +103,33 @@ export const Empty: StoryObj = {
       emptyState={<EmptyState title="No production orders" description="Create your first order to get started." />}
     />
   ),
+};
+
+/**
+ * An actions column keeps a visually empty header (`header: ''`) and still gives
+ * its `columnheader` a name through `headerLabel`, rendered `sr-only`
+ * (DT-FND-11-FB-1.1). `headerLabel` is ignored when `header` has visible text,
+ * so the announced name always matches the visible one (label in name).
+ */
+export const ActionsColumn: StoryObj = {
+  render: () => {
+    const actionColumns: DataTableColumn<Order>[] = [
+      { key: 'id', header: 'Order' },
+      { key: 'name', header: 'Name' },
+      { key: 'qty', header: 'Qty', align: 'right' },
+      {
+        key: 'actions',
+        header: '',
+        headerLabel: 'Actions',
+        align: 'right',
+        width: 120,
+        render: (r) => (
+          <Button size="sm" variant="outline" aria-label={`Edit ${r.name}`}>
+            Edit
+          </Button>
+        ),
+      },
+    ];
+    return <DataTable<Order> columns={actionColumns} data={rows} />;
+  },
 };

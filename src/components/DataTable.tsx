@@ -208,6 +208,7 @@ export function DataTable<T>({
   const dsColumns: DsColumn<T>[] = visibleColumns.map((column) => ({
     key: column.key,
     header: column.header,
+    headerLabel: column.headerLabel,
     render: column.render,
     align: column.align,
     width: column.width,
