@@ -23,6 +23,17 @@ export interface DataTableColumn<T> {
   /** Property key on the row, or a synthetic string key when `render` is used. */
   key: keyof T | string;
   header: string;
+  /**
+   * Accessible name for a column whose `header` is visually empty, such as an
+   * actions column (DT-FND-11-FB-1.1). Rendered `sr-only` in the
+   * `columnheader`, so a screen reader announces it while the header stays
+   * visually blank; also used in the sort and options buttons' labels.
+   *
+   * Ignored as soon as `header` contains visible text: the visible text is then
+   * the name, so what a screen reader announces always matches what a sighted
+   * or voice-control user sees (WCAG 2.5.3, label in name). No runtime warning.
+   */
+  headerLabel?: string;
   render?: (row: T) => ReactNode;
   align?: 'left' | 'right' | 'center';
   /**

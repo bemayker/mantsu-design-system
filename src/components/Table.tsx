@@ -26,6 +26,16 @@ import { useEscapeKey } from './useEscapeKey';
 export interface Column<T> {
   key: keyof T | string;
   header: string;
+  /**
+   * Accessible name for a column whose `header` is visually empty (an actions
+   * column): rendered `sr-only` in the `<th>`, and used in the sort and
+   * options buttons' labels.
+   *
+   * Ignored as soon as `header` contains visible text. The visible text is then
+   * the name, so what a screen reader announces always matches what a sighted
+   * or voice-control user sees (WCAG 2.5.3, label in name). No runtime warning.
+   */
+  headerLabel?: string;
   render?: (row: T) => React.ReactNode;
   align?: 'left' | 'right' | 'center';
   /** Allow clicking the header / menu to sort by this column. Defaults to the table's `sortable`. */
@@ -449,6 +459,14 @@ export function Table<T>({
               const canFilter = isFilterable(c);
               const active = sort?.key === key ? sort.direction : null;
               const hasFilter = !!filters[key]?.trim();
+              // `headerLabel` names a visually empty header only (see `Column`).
+              const hiddenLabel = c.header.trim() === '' ? c.headerLabel : undefined;
+              const name = hiddenLabel ?? c.header;
+              const label = hiddenLabel !== undefined ? (
+                <span className="sr-only">{hiddenLabel}</span>
+              ) : (
+                <span>{c.header}</span>
+              );
               return (
                 <th
                   key={key}
@@ -475,15 +493,15 @@ export function Table<T>({
                           onClick={() => cycleSort(key)}
                           data-testid={`data-table-sort-${key}`}
                           className="group inline-flex items-center gap-1 rounded-sm outline-none hover:text-midnight focus-visible:ring-2 focus-visible:ring-primary-blue/40"
-                          aria-label={`Sort by ${c.header}`}
+                          aria-label={`Sort by ${name}`}
                         >
-                          <span>{c.header}</span>
+                          {label}
                           <span className={cn('text-primary-blue transition-opacity', !active && 'opacity-0 group-hover:opacity-40')}>
                             {active === 'desc' ? <ArrowDown /> : <ArrowUp />}
                           </span>
                         </button>
                       ) : (
-                        <span>{c.header}</span>
+                        label
                       )}
                     </span>
 
@@ -491,7 +509,7 @@ export function Table<T>({
                       <button
                         type="button"
                         onClick={(e) => openMenu(e, key)}
-                        aria-label={`${c.header} options`}
+                        aria-label={`${name} options`}
                         aria-haspopup="menu"
                         className={cn(
                           'flex shrink-0 items-center justify-center rounded-sm text-slate-400',
@@ -571,7 +589,7 @@ export function Table<T>({
           <ColumnMenu
             x={menu.x}
             y={menu.y}
-            header={col.header}
+            header={col.header.trim() === '' ? col.headerLabel ?? col.header : col.header}
             sortable={isSortable(col)}
             filterable={isFilterable(col)}
             direction={sort?.key === menu.key ? sort.direction : null}

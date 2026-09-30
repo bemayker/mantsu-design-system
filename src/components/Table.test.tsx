@@ -267,4 +267,17 @@ describe('vendored DS Table', () => {
       expect(remaining).toEqual(['named-2']);
     });
   });
+
+  it('names a visually empty header by headerLabel (DT-FND-11-FB-1.1)', () => {
+    render(
+      <Table<Item>
+        columns={[...columns, { key: 'actions', header: '', headerLabel: 'Actions', render: () => null }]}
+        data={data}
+        sortable={false}
+        filterable={false}
+      />,
+    );
+    expect(screen.getByRole('columnheader', { name: 'Actions' })).toBeInTheDocument();
+  });
 });
+
