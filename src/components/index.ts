@@ -41,4 +41,5 @@ export * from './contrast';
 export * from './useEscapeKey';
 export * from './SuiteNav';
 export * from './SettingsScopePage';
+export * from './ConnectionStatusCard';
 export { tokens, colors, gradients, typography, shadows, spacing, radii } from '../tokens/tokens';
