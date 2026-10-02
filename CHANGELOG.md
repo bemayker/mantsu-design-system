@@ -6,6 +6,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 package follows [semantic versioning](https://semver.org/). See "Versioning" in the README
 for what counts as breaking.
 
+## 2.6.0
+
+### Added
+
+- `ConnectionStatusCard`: the Technical settings connection light, in Core's
+  style (CORE-TECH-11). A heading with a state badge (`connected`,
+  `disconnected`, `error`), reason, verbatim error detail, timestamp line,
+  "Refresh status" and an optional "Test connection" with its result block.
+  One connection sits on the heading line; two or more get a labelled line
+  each, so a dead consumer cannot hide behind a healthy producer. Every string
+  arrives as a prop (`labels`, each row's `stateLabel`); `testId` gets
+  `-state-{key}`, `-reason-{key}`, `-detail-{key}`, `-row-{key}`, `-checking`,
+  `-unavailable`, `-refresh`, `-test`, `-timestamp` and `-test-result`
+  suffixes. Exports `ConnectionState`, `ConnectionStatusRow`,
+  `ConnectionStatusCardLabels` and `ConnectionStatusCardProps`. Replaces the
+  local copy in Downtimes (QM-CAP-3.1).
+
 ## 2.5.0
 
 ### Added
