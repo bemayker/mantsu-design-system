@@ -1,8 +1,15 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { useMemo, useState } from 'react';
-import { ListTable, type ListTableColumn, type ListTableDensity } from '../components/ListTable';
+import { useMemo, useRef, useState } from 'react';
+import {
+  LIST_TABLE_HEADER_HEIGHT,
+  LIST_TABLE_ROW_HEIGHT,
+  ListTable,
+  type ListTableColumn,
+  type ListTableDensity,
+} from '../components/ListTable';
 import { Pagination, getPageRange } from '../components/Pagination';
 import { useClientTable } from '../components/useClientTable';
+import { useDynamicPageSize } from '../components/useDynamicPageSize';
 
 const meta: Meta = { title: 'Components/ListTable', tags: ['autodocs'] };
 export default meta;
@@ -118,3 +125,41 @@ const SortAndFilterDemo = ({ density }: { density: ListTableDensity }) => {
 
 export const SortAndFilter: StoryObj = { render: () => <SortAndFilterDemo density="picker" /> };
 export const SortAndFilterCompact: StoryObj = { render: () => <SortAndFilterDemo density="compact" /> };
+
+/* ------------------------------------------------- fill the height (UI-33) */
+
+const MANY_ORDERS: PlannedOrder[] = Array.from({ length: 80 }, (_, index) => ({
+  ...PLANNED_ORDERS[index % PLANNED_ORDERS.length],
+  id: String(7009400 + index),
+}));
+
+// Resize the canvas: the rows per page follow the height, and the page is
+// clamped so a taller window never leaves the reader past the last page.
+const FillHeightDemo = ({ density }: { density: ListTableDensity }) => {
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const pageSize = useDynamicPageSize(bodyRef, LIST_TABLE_ROW_HEIGHT[density], {
+    minRows: 5,
+    reservePx: LIST_TABLE_HEADER_HEIGHT[density],
+  });
+  const [page, setPage] = useState(1);
+  const table = useClientTable({ rows: MANY_ORDERS, columns: sortFilterColumns, onPageReset: () => setPage(1) });
+  const range = getPageRange(page, pageSize, table.rows.length);
+  const pageRows = table.rows.slice((range.page - 1) * pageSize, range.page * pageSize);
+
+  return (
+    <div className="flex h-[80vh] flex-col border border-slate-200">
+      <div ref={bodyRef} className="flex min-h-0 flex-1 flex-col">
+        <ListTable columns={sortFilterColumns} rows={pageRows} rowKey={(r) => r.id}
+          rowTestId={(r) => `order-${r.id}`} density={density} testId="story-fill-height-table"
+          ariaLabel="Orders" {...table.listTableProps} />
+      </div>
+      <Pagination page={range.page} pageCount={range.pageCount} onPageChange={setPage}
+        summary={`Rows ${range.from}-${range.to} of ${table.rows.length}`}
+        labels={{ first: 'First', previous: 'Previous', next: 'Next', last: 'Last' }}
+        ariaLabel="Pagination" />
+    </div>
+  );
+};
+
+export const FillHeight: StoryObj = { render: () => <FillHeightDemo density="picker" /> };
+export const FillHeightCompact: StoryObj = { render: () => <FillHeightDemo density="compact" /> };

@@ -6,6 +6,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 package follows [semantic versioning](https://semver.org/). See "Versioning" in the README
 for what counts as breaking.
 
+## 2.8.0
+
+### Added
+
+- `useDynamicPageSize(ref, rowHeight, { minRows, reservePx, recomputeKey })`
+  (UI-33), moved here from Lists: how many rows fit in the element `ref` points
+  at, re-measured on layout and window resize, so a full-page list fills the
+  screen height instead of showing a fixed ten rows. Before the layout has
+  sized the element it estimates from the viewport. Exported type
+  `DynamicPageSizeOptions`.
+- `LIST_TABLE_ROW_HEIGHT` and `LIST_TABLE_HEADER_HEIGHT`, per `ListTable`
+  density, the `rowHeight` and `reservePx` to pass for a `ListTable` wrapped in
+  `<div ref={ref} className="flex min-h-0 flex-1 flex-col">`. A `DataTable`
+  screen passes the row height it renders. Stories `ListTable/FillHeight` and
+  `FillHeightCompact`. Nothing existing changes.
+
 ## 2.7.1
 
 ### Fixed
