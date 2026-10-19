@@ -14,7 +14,8 @@ for what counts as breaking.
   (UI-33), moved here from Lists: how many rows fit in the element `ref` points
   at, re-measured on layout and window resize, so a full-page list fills the
   screen height instead of showing a fixed ten rows. Before the layout has
-  sized the element it estimates from the viewport. Exported type
+  sized the element it estimates from the viewport. Without `ResizeObserver`
+  (jsdom) it measures once and on window resize. Exported type
   `DynamicPageSizeOptions`.
 - `LIST_TABLE_ROW_HEIGHT` and `LIST_TABLE_HEADER_HEIGHT`, per `ListTable`
   density, the `rowHeight` and `reservePx` to pass for a `ListTable` wrapped in

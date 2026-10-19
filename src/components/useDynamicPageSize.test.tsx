@@ -114,6 +114,20 @@ describe('useDynamicPageSize', () => {
     expect(result.current).toBe(10);
   });
 
+  it('measures without ResizeObserver, as in jsdom, and still follows a window resize', () => {
+    vi.stubGlobal('ResizeObserver', undefined);
+    height = 400;
+    const ref = { current: measuredElement() };
+    const { result } = renderHook(() => useDynamicPageSize(ref, 40));
+    expect(result.current).toBe(10);
+
+    act(() => {
+      height = 800;
+      window.dispatchEvent(new Event('resize'));
+    });
+    expect(result.current).toBe(20);
+  });
+
   it('stops listening on unmount', () => {
     height = 400;
     const ref = { current: measuredElement() };

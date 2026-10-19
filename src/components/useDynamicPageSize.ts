@@ -34,7 +34,8 @@ export interface DynamicPageSizeOptions {
  *   screen passes the row height it renders.
  *
  * Falls back to a viewport-relative estimate before the flex layout has sized
- * the element. Recomputes on layout and window resize. The screen paginates
+ * the element. Recomputes on layout and window resize; where `ResizeObserver`
+ * does not exist (jsdom) only on window resize. The screen paginates
  * with the result and clamps its page to the new page count, so a resize never
  * leaves the reader on a page that no longer exists.
  */
@@ -69,13 +70,14 @@ export function useDynamicPageSize(
 
     compute();
     const raf = requestAnimationFrame(compute);
-    const observer = new ResizeObserver(compute);
-    observer.observe(element);
-    observer.observe(document.body);
+    // jsdom implements no `ResizeObserver`; the window listener still runs.
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(compute);
+    observer?.observe(element);
+    observer?.observe(document.body);
     window.addEventListener('resize', compute);
     return () => {
       cancelAnimationFrame(raf);
-      observer.disconnect();
+      observer?.disconnect();
       window.removeEventListener('resize', compute);
     };
   }, [ref, rowHeight, minRows, reservePx, recomputeKey]);
