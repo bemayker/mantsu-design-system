@@ -1,8 +1,8 @@
 import React from 'react';
-import { createPortal } from 'react-dom';
 
+import { cycleSortState } from './clientTable';
+import { ColumnMenu, ColumnOptionsButton, SortHeaderButton, columnMenuAnchor } from './ColumnMenu';
 import { cn } from './cn';
-import { useEscapeKey } from './useEscapeKey';
 
 /**
  * Table — data table with optional empty state.
@@ -131,167 +131,6 @@ export interface TableProps<T> {
   footerRow?: React.ReactNode;
 }
 
-/* ------------------------------------------------------------------ icons */
-
-const ArrowUp: React.FC = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-    strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-    <path d="m18 15-6-6-6 6" />
-  </svg>
-);
-const ArrowDown: React.FC = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-    strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-    <path d="m6 9 6 6 6-6" />
-  </svg>
-);
-const Options: React.FC = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-    <line x1="4" y1="6" x2="20" y2="6" /><line x1="7" y1="12" x2="17" y2="12" /><line x1="10" y1="18" x2="14" y2="18" />
-  </svg>
-);
-const SearchIcon: React.FC = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-slate-400" aria-hidden>
-    <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
-  </svg>
-);
-const Check: React.FC = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-    strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-    <path d="M20 6 9 17l-5-5" />
-  </svg>
-);
-
-/* -------------------------------------------------------------- column menu */
-
-interface ColumnMenuProps {
-  x: number;
-  y: number;
-  header: string;
-  sortable: boolean;
-  filterable: boolean;
-  direction: SortDirection | null;
-  filterValue: string;
-  onSort: (direction: SortDirection | null) => void;
-  onFilter: (value: string) => void;
-  onClose: () => void;
-}
-
-const ColumnMenu: React.FC<ColumnMenuProps> = ({
-  x, y, header, sortable, filterable, direction, filterValue, onSort, onFilter, onClose,
-}) => {
-  const ref = React.useRef<HTMLDivElement>(null);
-  const inputRef = React.useRef<HTMLInputElement>(null);
-  const [pos, setPos] = React.useState({ x, y });
-
-  // Flip / clamp so the menu never overflows the viewport.
-  React.useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const { width, height } = el.getBoundingClientRect();
-    const pad = 8;
-    const nx = x + width > window.innerWidth - pad ? Math.max(pad, window.innerWidth - width - pad) : x;
-    const ny = y + height > window.innerHeight - pad ? Math.max(pad, window.innerHeight - height - pad) : y;
-    setPos({ x: nx, y: ny });
-  }, [x, y]);
-
-  // Focus the search field once, when the menu opens.
-  React.useEffect(() => {
-    if (filterable) inputRef.current?.focus();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Mounted only while open, so always an active registrant. The shared stack
-  // is what keeps Escape from also closing a `Modal` or `SideDrawer` this menu
-  // was opened inside.
-  useEscapeKey(true, onClose);
-
-  React.useEffect(() => {
-    const close = () => onClose();
-    window.addEventListener('click', close);
-    window.addEventListener('contextmenu', close);
-    window.addEventListener('scroll', close, true);
-    return () => {
-      window.removeEventListener('click', close);
-      window.removeEventListener('contextmenu', close);
-      window.removeEventListener('scroll', close, true);
-    };
-  }, [onClose]);
-
-  const item = (label: string, active: boolean, icon: React.ReactNode, onClick: () => void) => (
-    <button
-      type="button"
-      role="menuitem"
-      onClick={onClick}
-      className={cn(
-        'flex w-full items-center gap-2 px-3 py-2 text-left text-body-sm hover:bg-frost',
-        active ? 'text-primary-blue' : 'text-midnight'
-      )}
-    >
-      <span className="flex size-3.5 shrink-0 items-center justify-center">{icon}</span>
-      {label}
-    </button>
-  );
-
-  // Portal to <body> so no ancestor transform/overflow shifts or clips the fixed menu.
-  return createPortal(
-    <div
-      ref={ref}
-      role="menu"
-      aria-label={`${header} options`}
-      className="fixed z-50 min-w-[220px] overflow-hidden rounded-md border border-slate-200 bg-white py-1 shadow-mantsu-lg"
-      style={{ top: pos.y, left: pos.x }}
-      onClick={(e) => e.stopPropagation()}
-      onContextMenu={(e) => e.preventDefault()}
-    >
-      {sortable && (
-        <>
-          {item('Sort ascending', direction === 'asc', direction === 'asc' ? <Check /> : <ArrowUp />,
-            () => { onSort('asc'); onClose(); })}
-          {item('Sort descending', direction === 'desc', direction === 'desc' ? <Check /> : <ArrowDown />,
-            () => { onSort('desc'); onClose(); })}
-          {item('Clear sort', false, null, () => { onSort(null); onClose(); })}
-        </>
-      )}
-
-      {sortable && filterable && <div className="my-1 h-px bg-slate-200" />}
-
-      {filterable && (
-        <div className="px-2 py-1.5">
-          <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 focus-within:border-primary-blue focus-within:ring-2 focus-within:ring-primary-blue/30">
-            <SearchIcon />
-            <input
-              ref={inputRef}
-              type="text"
-              value={filterValue}
-              onChange={(e) => onFilter(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') onClose(); }}
-              placeholder={`Search ${header}…`}
-              aria-label={`Search ${header}`}
-              className="w-full bg-transparent text-body-sm text-midnight outline-none placeholder:text-slate-400"
-            />
-            {filterValue && (
-              <button
-                type="button"
-                aria-label="Clear search"
-                onClick={() => onFilter('')}
-                className="shrink-0 text-slate-400 hover:text-midnight"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                  strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                  <path d="M18 6 6 18M6 6l12 12" />
-                </svg>
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-    </div>,
-    document.body
-  );
-};
-
 /* ---------------------------------------------------------------------- table */
 
 const alignClass = (align?: Column<unknown>['align']) =>
@@ -333,11 +172,7 @@ export function Table<T>({
     else { setInternalSort(next); onSortChange?.(next); }
   };
   // Cycle a column header: none → asc → desc → none.
-  const cycleSort = (key: string) => {
-    if (!sort || sort.key !== key) commitSort({ key, direction: 'asc' });
-    else if (sort.direction === 'asc') commitSort({ key, direction: 'desc' });
-    else commitSort(null);
-  };
+  const cycleSort = (key: string) => commitSort(cycleSortState(sort, key));
   const setSort = (key: string, direction: SortDirection | null) =>
     commitSort(direction ? { key, direction } : null);
 
@@ -392,8 +227,7 @@ export function Table<T>({
 
   const openMenu = (e: React.MouseEvent, key: string) => {
     e.stopPropagation(); // don't also toggle the header sort / close via window listener
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    setMenu({ key, x: rect.right - 220, y: rect.bottom + 4 });
+    setMenu({ key, ...columnMenuAnchor(e.currentTarget as HTMLElement) });
   };
 
   /**
@@ -488,38 +322,25 @@ export function Table<T>({
                       )}
                     >
                       {canSort ? (
-                        <button
-                          type="button"
+                        <SortHeaderButton
+                          label={label}
+                          name={name}
+                          active={active}
                           onClick={() => cycleSort(key)}
-                          data-testid={`data-table-sort-${key}`}
-                          className="group inline-flex items-center gap-1 rounded-sm outline-none hover:text-midnight focus-visible:ring-2 focus-visible:ring-primary-blue/40"
-                          aria-label={`Sort by ${name}`}
-                        >
-                          {label}
-                          <span className={cn('text-primary-blue transition-opacity', !active && 'opacity-0 group-hover:opacity-40')}>
-                            {active === 'desc' ? <ArrowDown /> : <ArrowUp />}
-                          </span>
-                        </button>
+                          testId={`data-table-sort-${key}`}
+                        />
                       ) : (
                         label
                       )}
                     </span>
 
                     {(canSort || canFilter) && (
-                      <button
-                        type="button"
+                      <ColumnOptionsButton
+                        name={name}
+                        sizeClass={d.options}
+                        highlighted={menu?.key === key || hasFilter}
                         onClick={(e) => openMenu(e, key)}
-                        aria-label={`${name} options`}
-                        aria-haspopup="menu"
-                        className={cn(
-                          'flex shrink-0 items-center justify-center rounded-sm text-slate-400',
-                          d.options,
-                          'hover:bg-slate-200/70 hover:text-midnight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue/40',
-                          (menu?.key === key || hasFilter) && 'bg-slate-200/70 text-primary-blue'
-                        )}
-                      >
-                        <Options />
-                      </button>
+                      />
                     )}
                   </div>
                 </th>
