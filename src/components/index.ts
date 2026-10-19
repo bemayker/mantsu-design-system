@@ -24,6 +24,7 @@ export * from './DataTable';
 export * from './DataTable.types';
 export * from './ListTable';
 export * from './useClientTable';
+export * from './useDynamicPageSize';
 export * from './Tooltip';
 export * from './ProgressBar';
 export * from './Tree';

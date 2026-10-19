@@ -137,6 +137,29 @@ const BODY_CELL: Readonly<Record<ListTableDensity, string>> = {
   modal: 'px-2 py-2 text-[14px] leading-6',
 };
 
+/**
+ * One body row's height (px) per density, for `useDynamicPageSize` (UI-33):
+ * `py-2` plus a 24px line, plus the 1px row rule. A cell whose content wraps
+ * makes its row taller; the body then scrolls rather than clips.
+ */
+export const LIST_TABLE_ROW_HEIGHT: Readonly<Record<ListTableDensity, number>> = {
+  picker: 41,
+  compact: 41,
+  modal: 41,
+};
+
+/**
+ * The sticky header's height (px) per density, the `reservePx` to pass to
+ * `useDynamicPageSize`: `py-3` plus the taller of the 20px line and the
+ * column options button (24px, 20px in `compact`), plus the 1px rule, with
+ * one pixel of slack for the inline button's baseline.
+ */
+export const LIST_TABLE_HEADER_HEIGHT: Readonly<Record<ListTableDensity, number>> = {
+  picker: 50,
+  compact: 46,
+  modal: 50,
+};
+
 export function ListTable<Row>({
   columns,
   rows,
