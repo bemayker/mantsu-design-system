@@ -1,15 +1,44 @@
-import type { HTMLAttributes, KeyboardEvent, ReactNode } from 'react';
+import { useCallback, useState } from 'react';
+import type { HTMLAttributes, KeyboardEvent, MouseEvent, ReactNode } from 'react';
 
+import { cycleSortState, type ClientTableValue, type ColumnFilters } from './clientTable';
+import {
+  ColumnMenu,
+  ColumnOptionsButton,
+  DEFAULT_COLUMN_MENU_LABELS,
+  SortHeaderButton,
+  columnMenuAnchor,
+  type ColumnMenuLabels,
+} from './ColumnMenu';
 import { cn } from './cn';
+import type { SortState } from './Table';
+
+export { DEFAULT_COLUMN_MENU_LABELS, type ColumnMenuLabels } from './ColumnMenu';
 
 /**
  * ListTable — the Make list table (UI-20.3, promoted from the Order Cockpit).
  *
  * Chrome only: a white sticky header, rows that position and style cells, a
  * row click that is also reachable by Enter and Space, and a selected row
- * tinted `bg-frost` and marked `data-selected`. It holds no state and never
- * sorts or filters; that is `DataTable` (Core's adapter over `Table`), which
- * is a different design, not a heavier version of this one.
+ * tinted `bg-frost` and marked `data-selected`. It never sorts or filters the
+ * rows it is given: a screen pages its rows first, so a table that reordered
+ * them would only ever reorder one page. `DataTable` (Core's adapter over
+ * `Table`) is a different design, not a heavier version of this one.
+ *
+ * Sort and column search, opt-in per column (UI-32): a column with `sortable`
+ * gets a header button that cycles ascending, descending, off, and a column
+ * with `sortable` or `filterable` gets `Table`'s options button and column
+ * menu (sort ascending / descending / clear, search in column). Both are
+ * controlled only: the table reports through `onSortChange` and
+ * `onColumnFiltersChange` and shows `sort` and `columnFilters`. The state and
+ * the sorting itself live in `useClientTable`, which runs on the full row set
+ * before pagination; spread its `listTableProps` here and pass one page of
+ * its `rows`. A flagged column with no handlers renders its controls and
+ * changes nothing. A flagged column should set `accessor`, because the
+ * default `row[key]` rarely matches a `render`-only column's synthetic key.
+ * `aria-sort` is set on the sorted header only. The only state held here is
+ * which column menu is open. A column with neither flag renders exactly as
+ * before.
  *
  * Three densities, one per recorded surface: `picker` (px 24, 16px bold
  * header), `compact` (px 16, 14px bold header, truncated cells) and `modal`
@@ -26,6 +55,15 @@ export interface ListTableColumn<Row> {
   render: (row: Row) => ReactNode;
   /** Applied to the header and the body cell alike: widths, alignment. */
   className?: string;
+  /** Header sort button and the menu's sort items. Default off. */
+  sortable?: boolean;
+  /** The menu's "search in column" field. Default off. */
+  filterable?: boolean;
+  /**
+   * The value `useClientTable` sorts and filters on; this table never reads
+   * it. Defaults to `row[key]`.
+   */
+  accessor?: (row: Row) => ClientTableValue;
 }
 
 /**
@@ -50,6 +88,16 @@ export interface ListTableProps<Row> {
   density?: ListTableDensity;
   testId: string;
   ariaLabel?: string;
+  /** The sorted column, shown by its arrow and `aria-sort`. */
+  sort?: SortState | null;
+  /** The next sort after a header click or a menu choice; `null` clears it. */
+  onSortChange?: (sort: SortState | null) => void;
+  /** The search text per column key. */
+  columnFilters?: ColumnFilters;
+  /** The whole next record; a column whose text becomes `''` is removed from it. */
+  onColumnFiltersChange?: (filters: Record<string, string>) => void;
+  /** Merged over `DEFAULT_COLUMN_MENU_LABELS`, for a translated screen. */
+  columnMenuLabels?: Partial<ColumnMenuLabels>;
 }
 
 const HEADER_CELL: Readonly<Record<ListTableDensity, string>> = {
@@ -70,6 +118,15 @@ const ROW_BORDER: Readonly<Record<ListTableDensity, string>> = {
   modal: 'border-b border-slate-200',
 };
 
+/** The options button is paired with the header text size, as in `Table`. */
+const OPTIONS_SIZE: Readonly<Record<ListTableDensity, string>> = {
+  picker: 'size-6',
+  compact: 'size-5',
+  modal: 'size-6',
+};
+
+const NO_FILTERS: ColumnFilters = {};
+
 const BODY_CELL: Readonly<Record<ListTableDensity, string>> = {
   picker: 'px-6 py-2 text-[14px] leading-6',
   compact: 'overflow-hidden text-ellipsis whitespace-nowrap px-4 py-2 text-[14px] leading-6',
@@ -87,8 +144,94 @@ export function ListTable<Row>({
   density = 'picker',
   testId,
   ariaLabel,
+  sort = null,
+  onSortChange,
+  columnFilters = NO_FILTERS,
+  onColumnFiltersChange,
+  columnMenuLabels,
 }: ListTableProps<Row>) {
   const clickable = onRowClick !== undefined;
+  const labels: ColumnMenuLabels = columnMenuLabels
+    ? { ...DEFAULT_COLUMN_MENU_LABELS, ...columnMenuLabels }
+    : DEFAULT_COLUMN_MENU_LABELS;
+
+  const [container, setContainer] = useState<HTMLDivElement | null>(null);
+  const [menu, setMenu] = useState<{ key: string; anchor: HTMLElement; x: number; y: number } | null>(null);
+  const closeMenu = useCallback(() => setMenu(null), []);
+  // The header is sticky, so a vertical scroll leaves the anchor in place and
+  // only a horizontal one moves it.
+  const reanchorMenu = useCallback(
+    () => setMenu((current) => current && { ...current, ...columnMenuAnchor(current.anchor) }),
+    [],
+  );
+
+  const openMenu = (event: MouseEvent<HTMLButtonElement>, key: string) => {
+    event.stopPropagation(); // the window listener would close the menu again
+    const anchor = event.currentTarget;
+    setMenu({ key, anchor, ...columnMenuAnchor(anchor) });
+  };
+
+  const setSort = (key: string, direction: SortState['direction'] | null) =>
+    onSortChange?.(direction ? { key, direction } : null);
+
+  const setFilter = (key: string, value: string) => {
+    const next: Record<string, string> = { ...columnFilters };
+    if (value) next[key] = value;
+    else delete next[key];
+    onColumnFiltersChange?.(next);
+  };
+
+  const renderHeader = (column: ListTableColumn<Row>) => {
+    const headerClassName = cn(
+      'text-left text-primary-neutral',
+      HEADER_CELL[density],
+      column.className,
+    );
+    if (!column.sortable && !column.filterable) {
+      return (
+        <th key={column.key} scope="col" className={headerClassName}>
+          {column.header}
+        </th>
+      );
+    }
+
+    const active = sort?.key === column.key ? sort.direction : null;
+    const hasFilter = !!columnFilters[column.key]?.trim();
+    return (
+      <th
+        key={column.key}
+        scope="col"
+        aria-sort={active === 'asc' ? 'ascending' : active === 'desc' ? 'descending' : undefined}
+        className={headerClassName}
+      >
+        {/* Inline, so `column.className` alignment (`text-right`) still applies. */}
+        <span className="inline-flex items-center gap-1">
+          {column.sortable ? (
+            <SortHeaderButton
+              label={<span>{column.header}</span>}
+              name={column.header}
+              active={active}
+              onClick={() => onSortChange?.(cycleSortState(sort, column.key))}
+              testId={`${testId}-sort-${column.key}`}
+              labels={labels}
+            />
+          ) : (
+            column.header
+          )}
+          <ColumnOptionsButton
+            name={column.header}
+            sizeClass={OPTIONS_SIZE[density]}
+            highlighted={menu?.key === column.key || hasFilter}
+            onClick={(event) => openMenu(event, column.key)}
+            testId={`${testId}-options-${column.key}`}
+            labels={labels}
+          />
+        </span>
+      </th>
+    );
+  };
+
+  const menuColumn = menu ? columns.find((column) => column.key === menu.key) : undefined;
 
   const onRowKeyDown = (event: KeyboardEvent<HTMLTableRowElement>, row: Row) => {
     if (!clickable) return;
@@ -100,23 +243,11 @@ export function ListTable<Row>({
   };
 
   return (
-    <div data-testid={testId} className="flex-1 overflow-auto bg-white">
+    <div ref={setContainer} data-testid={testId} className="flex-1 overflow-auto bg-white">
       <table className="w-full lining-nums tabular-nums" aria-label={ariaLabel}>
         <thead className={cn('sticky top-0 z-10 bg-white', HEADER_BORDER[density])}>
           <tr>
-            {columns.map((column) => (
-              <th
-                key={column.key}
-                scope="col"
-                className={cn(
-                  'text-left text-primary-neutral',
-                  HEADER_CELL[density],
-                  column.className,
-                )}
-              >
-                {column.header}
-              </th>
-            ))}
+            {columns.map(renderHeader)}
           </tr>
         </thead>
         <tbody>
@@ -156,6 +287,24 @@ export function ListTable<Row>({
           })}
         </tbody>
       </table>
+
+      {menu && menuColumn && (
+        <ColumnMenu
+          x={menu.x}
+          y={menu.y}
+          header={menuColumn.header}
+          sortable={!!menuColumn.sortable}
+          filterable={!!menuColumn.filterable}
+          direction={sort?.key === menu.key ? sort.direction : null}
+          filterValue={columnFilters[menu.key] ?? ''}
+          onSort={(direction) => setSort(menu.key, direction)}
+          onFilter={(value) => setFilter(menu.key, value)}
+          onClose={closeMenu}
+          labels={labels}
+          scrollContainer={container}
+          onContainerScroll={reanchorMenu}
+        />
+      )}
     </div>
   );
 }

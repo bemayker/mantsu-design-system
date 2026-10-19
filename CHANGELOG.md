@@ -6,6 +6,39 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 package follows [semantic versioning](https://semver.org/). See "Versioning" in the README
 for what counts as breaking.
 
+## 2.7.0
+
+### Added
+
+- `ListTable` sort and column search, opt-in per column (UI-32). A column with
+  `sortable` gets a header button that cycles ascending, descending, off, with
+  `aria-sort` on the sorted header only; a column with `sortable` or
+  `filterable` gets `Table`'s options button and column menu (sort ascending,
+  sort descending, clear sort, search in column), with the same keyboard and
+  screen-reader behaviour, because both tables now render one shared menu.
+  New column fields `sortable`, `filterable` (both default off) and `accessor`
+  (defaults to `row[key]`); new table props `sort`, `onSortChange`,
+  `columnFilters`, `onColumnFiltersChange` (controlled only) and
+  `columnMenuLabels` (merged over `DEFAULT_COLUMN_MENU_LABELS`, the English
+  defaults, for a translated screen). `ListTable` still never reorders or drops
+  the rows it is given. Test ids `{testId}-sort-{key}` and
+  `{testId}-options-{key}` on flagged columns. A flagged column whose `key` is
+  not a row field needs an `accessor`. Existing consumers render exactly as in
+  2.6.0.
+- `useClientTable`: sorts and filters the full row set before the screen
+  paginates. Takes `rows`, `columns` (a `ListTableColumn`, `DataTableColumn` or
+  `Column` array), controlled or uncontrolled `sort` / `defaultSort` /
+  `onSortChange` and `columnFilters` / `defaultColumnFilters` /
+  `onColumnFiltersChange`, and `onPageReset`, called after every column filter
+  change. Returns `rows`, `sort`, `columnFilters`, `hasColumnFilters` and
+  `listTableProps` to spread onto `ListTable`. Column searches are a
+  case-insensitive substring match and combine (AND) with the screen's own
+  filters; numbers and dates sort by value, empty values sort last in both
+  directions, ties keep the input order. Exports `UseClientTableOptions`,
+  `UseClientTableResult`, `ClientTableListProps`, `ClientTableColumn`,
+  `ClientTableValue`, `ColumnFilters`, `ColumnMenuLabels` and
+  `DEFAULT_COLUMN_MENU_LABELS`.
+
 ## 2.6.0
 
 ### Added
