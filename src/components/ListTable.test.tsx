@@ -85,7 +85,14 @@ describe('ListTable', () => {
 
     expect(screen.getByTestId('row-a')).not.toHaveAttribute('data-selected');
     expect(screen.getByTestId('row-b')).toHaveAttribute('data-selected', 'true');
-    expect(screen.getByTestId('row-b').className).toContain('bg-frost');
+    const selected = screen.getByTestId('row-b');
+    expect(selected.className).toContain('bg-selected-blue');
+    // One background only: a leftover bg-white would let stylesheet order
+    // decide whether the tint shows at all.
+    expect(selected.className).not.toContain('bg-white');
+    expect(selected.querySelector('td')?.className).toContain('shadow-[inset_4px_0_0');
+    expect(screen.getByTestId('row-a').className).toContain('bg-white');
+    expect(screen.getByTestId('row-a').querySelector('td')?.className).not.toContain('shadow-');
   });
 
   it('merges per-row attributes and appends their class rather than replacing the base one', () => {
