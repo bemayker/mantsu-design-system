@@ -20,7 +20,8 @@ export { DEFAULT_COLUMN_MENU_LABELS, type ColumnMenuLabels } from './ColumnMenu'
  *
  * Chrome only: a white sticky header, rows that position and style cells, a
  * row click that is also reachable by Enter and Space, and a selected row
- * tinted `bg-frost` and marked `data-selected`. It never sorts or filters the
+ * tinted `bg-selected-blue`, with a `primary-blue` bar on its first cell, and
+ * marked `data-selected`. It never sorts or filters the
  * rows it is given: a screen pages its rows first, so a table that reordered
  * them would only ever reorder one page. `DataTable` (Core's adapter over
  * `Table`) is a different design, not a heavier version of this one.
@@ -117,6 +118,9 @@ const ROW_BORDER: Readonly<Record<ListTableDensity, string>> = {
   compact: 'border-b border-slate-200',
   modal: 'border-b border-slate-200',
 };
+
+/** The selected row's accent: an inset bar, so it shifts no column. */
+const SELECTED_BAR = 'shadow-[inset_4px_0_0_theme(colors.primary-blue)]';
 
 /** The options button is paired with the header text size, as in `Table`. */
 const OPTIONS_SIZE: Readonly<Record<ListTableDensity, string>> = {
@@ -265,19 +269,30 @@ export function ListTable<Row>({
                 onClick={clickable ? () => onRowClick(row) : undefined}
                 onKeyDown={(event) => onRowKeyDown(event, row)}
                 className={cn(
-                  'bg-white transition-colors hover:bg-slate-50',
+                  'transition-colors',
+                  // One background per state: `cn` does not merge classes, so a
+                  // selected row that also carried `bg-white` would leave the
+                  // winner to stylesheet order.
+                  selected ? 'bg-selected-blue' : 'bg-white hover:bg-slate-50',
                   ROW_BORDER[density],
                   clickable &&
                     'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-blue',
-                  selected && 'bg-frost',
                   extraClassName,
                 )}
                 {...extra}
               >
-                {columns.map((column) => (
+                {columns.map((column, index) => (
                   <td
                     key={column.key}
-                    className={cn('text-slate-950', BODY_CELL[density], column.className)}
+                    className={cn(
+                      'text-slate-950',
+                      BODY_CELL[density],
+                      // The tint alone is too close to white to find on a
+                      // shop-floor screen; the bar on the first cell is what
+                      // the eye catches. A `tr` takes no box-shadow reliably.
+                      selected && index === 0 && SELECTED_BAR,
+                      column.className,
+                    )}
                   >
                     {column.render(row)}
                   </td>

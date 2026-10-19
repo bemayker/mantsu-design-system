@@ -6,6 +6,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 package follows [semantic versioning](https://semver.org/). See "Versioning" in the README
 for what counts as breaking.
 
+## 2.7.1
+
+### Fixed
+
+- `ListTable`'s selected row is now visible. It carried both `bg-white` and
+  `bg-frost`, so stylesheet order decided the background, and `frost` is close
+  to white anyway. A selected row now has one background, `bg-selected-blue`
+  (no hover change), and a 4px inset `primary-blue` bar on its first cell. The
+  row keeps `data-selected="true"`; no prop or test id changes.
+
 ## 2.7.0
 
 ### Added
