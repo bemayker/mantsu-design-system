@@ -1,3 +1,5 @@
+> **Moved (TAILOR-12.7-FB-1, 2026-10-20).** This repository is being archived; treat it as read-only. The design system now lives in [bemayker/mantsu](https://github.com/bemayker/mantsu), under `packages/design-system/`, and `@bemayker/mantsu-design-system` is published from there (`.github/workflows/publish-design-system.yml`). Storybook is no longer hosted on GitHub Pages: build it locally with `npm run storybook` in `packages/design-system/`. Do not open issues or pull requests here.
+
 # Mantsu Design System
 
 React component library + design tokens for the Mantsu MES UI, extracted from
